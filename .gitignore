@@ -3,3 +3,8 @@ output/
 .DS_Store
 *.pem
 *.swp
+.idea/
+bin/
+include/
+lib/
+pip-selfcheck.json
