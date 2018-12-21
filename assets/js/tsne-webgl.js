@@ -441,8 +441,9 @@ function startIfReady() {
     var button = document.querySelector('#enter');
     button.style.opacity = 1;
     button.addEventListener('click', function() {
-      removeLoader()
-      setTimeout(buildGeometry, 1100)
+      buildGeometry();
+      // removeLoader();
+      // setTimeout(buildGeometry, 1100)
     })
   }
 }
