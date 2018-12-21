@@ -169,7 +169,7 @@ function loadData() {
     // Process the image positions
     setImageData(data.positions);
     // Render the hotspots
-    renderHotspots(data.centroids);
+    // renderHotspots(data.centroids);
     // Create the geometries if all data has loaded
     startIfReady();
   })
