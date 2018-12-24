@@ -198,6 +198,7 @@ function setImageData(json) {
  *   name: the image's name without extension
  *   x: the image's unscaled X dimension position in chart coordinates
  *   y: the image's unscaled Y dimension position in chart coordinates
+ *   z: the image's unscaled Z dimension position in chart coordinates (if exists)
  *   width: the width of the image within its cell in the current atlas size
  *   height: the height of the image within its cell in the current atlas size
  *   xOffset: the image's left offset from its cell boundaries
@@ -209,15 +210,30 @@ function setImageData(json) {
  **/
 
 function parseImage(img) {
-  return {
-    name: img[0],
-    x: img[1],
-    y: img[2],
-    width: img[3],
-    height: img[4],
-    xOffset: (sizes.image.width - img[3])/2,
-    yOffset: (sizes.image.height - img[4])/2
+  if (img.length === 5) {
+    return {
+      name: img[0],
+      x: img[1],
+      y: img[2],
+      width: img[3],
+      height: img[4],
+      xOffset: (sizes.image.width - img[3])/2,
+      yOffset: (sizes.image.height - img[4])/2
+    }
+  } else {
+    return {
+      name: img[0],
+      x: img[1],
+      y: img[2],
+      z: img[3],
+      width: img[4],
+      height: img[5],
+      xOffset: (sizes.image.width - img[4])/2,
+      yOffset: (sizes.image.height - img[5])/2
+    }
   }
+
+
 }
 
 /**
@@ -293,10 +309,18 @@ function getImageData(img, idx) {
  **/
 
 function getImagePositionData(img, idx) {
-  return {
-    x: img.x * 15,
-    y: img.y * 12,
-    z: 2000 + (idx/100),
+  if (img.z) {
+    return {
+      x: img.x * 15,
+      y: img.y * 12,
+      z: img.z * 9
+    }
+  } else {
+    return {
+      x: img.x * 15,
+      y: img.y * 12,
+      z: 2000 + (idx/100)
+    }
   }
 }
 

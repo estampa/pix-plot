@@ -43,6 +43,7 @@ flags.DEFINE_integer('clusters', 20, 'The number of clusters to display in the i
 flags.DEFINE_boolean('validate_images', True, 'Whether to validate images before processing')
 flags.DEFINE_string('output_folder', 'output', 'The folder where output files will be stored')
 flags.DEFINE_string('layout', 'umap', 'The layout method to use {umap|tsne}')
+flags.DEFINE_integer('dimensions', 2, 'The number of dimensions of the output space')
 FLAGS = flags.FLAGS
 
 
@@ -54,7 +55,7 @@ class PixPlot:
 
     self.image_files = image_glob
     self.output_dir = FLAGS.output_folder
-    self.sizes = [16, 32, 64, 128]
+    self.sizes = [32, 64]  # eliminats 16 i 128
     self.n_clusters = FLAGS.clusters
     self.errored_images = set()
     self.vector_files = []
@@ -205,13 +206,13 @@ class PixPlot:
       _ = tf.import_graph_def(graph_def, name='')
 
 
-  def get_2d_image_positions(self):
+  def get_image_positions(self):
     '''
-    Create a 2d embedding of the image vectors
+    Create a embedding of the image vectors
     '''
-    print(' * calculating 2D image positions')
+    print(' * calculating 2D/3D image positions')
     model = self.build_model(self.image_vectors)
-    return self.get_image_positions(model)
+    return self.get_dimensional_image_positions(model)
 
 
   def load_image_vectors(self):
@@ -231,16 +232,17 @@ class PixPlot:
     '''
     print(' * building 2D projection')
     if self.method == 'tsne':
-      model = TSNE(n_components=2, random_state=0)
+      model = TSNE(n_components=FLAGS.dimensions, random_state=0)
       np.set_printoptions(suppress=True)
       return model.fit_transform( np.array(image_vectors) )
 
     elif self.method == 'umap':
-      model = UMAP(n_neighbors=25, min_dist=0.00001, metric='correlation')
+      # model = UMAP(n_neighbors=25, min_dist=0.00001, metric='correlation')
+      model = UMAP(n_components=FLAGS.dimensions, n_neighbors=25, min_dist=0.00001, metric='correlation')
       return model.fit_transform( np.array(image_vectors) )
 
 
-  def get_image_positions(self, fit_model):
+  def get_dimensional_image_positions(self, fit_model):
     '''
     Write a JSON file that indicates the 2d position of each image
     '''
@@ -254,13 +256,23 @@ class PixPlot:
       with Image.open(thumb_path) as image:
         width, height = image.size
       # Add the image name, x offset, y offset
-      image_positions.append([
-        os.path.splitext(os.path.basename(img))[0],
-        int(i[0] * 100),
-        int(i[1] * 100),
-        width,
-        height
-      ])
+      if FLAGS.dimensions == 2:
+        image_positions.append([
+          os.path.splitext(os.path.basename(img))[0],
+          int(i[0] * 100),
+          int(i[1] * 100),
+          width,
+          height
+        ])
+      else:
+        image_positions.append([
+          os.path.splitext(os.path.basename(img))[0],
+          int(i[0] * 100),
+          int(i[1] * 100),
+          int(i[2] * 100),
+          width,
+          height
+        ])
     return image_positions
 
 
@@ -296,7 +308,7 @@ class PixPlot:
     with open(out_path, 'w') as out:
       json.dump({
         'centroids': self.get_centroids(),
-        'positions': self.get_2d_image_positions(),
+        'positions': self.get_image_positions(),
         'atlas_counts': self.get_atlas_counts(),
       }, out)
 
@@ -315,7 +327,7 @@ class PixPlot:
     '''
     print(' * creating atlas files')
     atlas_group_imgs = []
-    for thumb_size in self.sizes[1:-1]:
+    for thumb_size in self.sizes:
       # identify the images for this atlas group
       atlas_thumbs = self.get_atlas_thumbs(thumb_size)
       atlas_group_imgs.append(len(atlas_thumbs))
