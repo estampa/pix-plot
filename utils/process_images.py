@@ -40,10 +40,10 @@ flags = tf.app.flags
 flags.DEFINE_string('model_dir', '/tmp/imagenet', 'The location of downloaded imagenet model')
 flags.DEFINE_string('image_files', '', 'A glob path of images to process')
 flags.DEFINE_integer('clusters', 20, 'The number of clusters to display in the image browser')
-flags.DEFINE_boolean('validate_images', True, 'Whether to validate images before processing')
+flags.DEFINE_boolean('validate_images', False, 'Whether to validate images before processing')
 flags.DEFINE_string('output_folder', 'output', 'The folder where output files will be stored')
 flags.DEFINE_string('layout', 'umap', 'The layout method to use {umap|tsne}')
-flags.DEFINE_integer('dimensions', 2, 'The number of dimensions of the output space')
+flags.DEFINE_integer('dimensions', 3, 'The number of dimensions of the output space')
 FLAGS = flags.FLAGS
 
 
@@ -252,7 +252,9 @@ class PixPlot:
       img = get_filename(self.vector_files[c])
       if img in self.errored_images:
         continue
-      thumb_path = join(self.output_dir, 'thumbs', '32px', img)
+
+      filename, file_extension = os.path.splitext(img)
+      thumb_path = join(self.output_dir, 'thumbs', '32px', filename + ".jpg")
       with Image.open(thumb_path) as image:
         width, height = image.size
       # Add the image name, x offset, y offset
