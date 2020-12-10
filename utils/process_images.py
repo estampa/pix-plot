@@ -35,6 +35,8 @@ import psutil
 import subprocess
 import codecs
 
+import matplotlib.pyplot as plt
+
 # configure command line interface arguments
 flags = tf.app.flags
 flags.DEFINE_string('model_dir', '/tmp/imagenet', 'The location of downloaded imagenet model')
@@ -238,8 +240,45 @@ class PixPlot:
 
     elif self.method == 'umap':
       # model = UMAP(n_neighbors=25, min_dist=0.00001, metric='correlation')
-      model = UMAP(n_components=FLAGS.dimensions, n_neighbors=25, min_dist=0.00001, metric='correlation')
+      model = UMAP(n_components=FLAGS.dimensions, n_neighbors=750, min_dist=1, metric='euclidean')
+      # model = UMAP(n_components=FLAGS.dimensions, n_neighbors=25, min_dist=0.00001, metric='correlation')
+
+      # for n_neighbors in (2, 5, 10, 20, 50, 100, 200, 500):
+      #   for min_dist in (0.00001, 0.0001, 0.001, 0.01, 0.1, 0.25, 0.5, 1):
+      #     for metric in ('euclidean', 'correlation', 'cosine'):
+      #       self.draw_umap(np.array(image_vectors), n_neighbors, min_dist, FLAGS.dimensions, metric)
+
+      # for n_neighbors in (250, 500, 750, 1000):
+      #   for min_dist in (0.25, 0.5, 0.75, 1):
+      #     for metric in ('euclidean', 'correlation', 'cosine'):
+      #       self.draw_umap(np.array(image_vectors), n_neighbors, min_dist, FLAGS.dimensions, metric)
+
       return model.fit_transform( np.array(image_vectors) )
+
+  def draw_umap(self, data, n_neighbors=15, min_dist=0.1, n_components=2, metric='euclidean', title=''):
+    fit = UMAP(
+      n_neighbors=n_neighbors,
+      min_dist=min_dist,
+      n_components=n_components,
+      metric=metric
+    )
+    print(data.shape)
+    u = fit.fit_transform(data)
+    fig = plt.figure()
+    if n_components == 1:
+      ax = fig.add_subplot(111)
+      ax.scatter(u[:, 0], range(len(u)), c=data)
+    if n_components == 2:
+      ax = fig.add_subplot(111)
+      ax.scatter(u[:, 0], u[:, 1], c=data)
+    if n_components == 3:
+      ax = fig.add_subplot(111, projection='3d')
+      ax.scatter(u[:, 0], u[:, 1], u[:, 2], s=1)
+
+    fig_file = "umap-ng_%03d-md_%0.5f-m_%s.png" % (n_neighbors, min_dist, metric)
+    fig.savefig(fig_file)
+    plt.close(fig)
+
 
 
   def get_dimensional_image_positions(self, fit_model):
