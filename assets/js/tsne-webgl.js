@@ -133,8 +133,8 @@ function getRenderer() {
 
 function getControls(camera, renderer) {
   var controls = new THREE.TrackballControls(camera, renderer.domElement);
-  controls.zoomSpeed = 0.4;
-  controls.panSpeed = 0.4;
+  controls.zoomSpeed = 0.05;
+  controls.panSpeed = 0.1;
   controls.rotateSpeed = 0;
   return controls;
 }
