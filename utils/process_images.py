@@ -248,6 +248,7 @@ class PixPlot:
     '''
     print(' * writing JSON file')
     image_positions = []
+    center = np.mean(fit_model, axis=0)
     for c, i in enumerate(fit_model):
       img = get_filename(self.vector_files[c])
       if img in self.errored_images:
@@ -261,17 +262,17 @@ class PixPlot:
       if FLAGS.dimensions == 2:
         image_positions.append([
           os.path.splitext(os.path.basename(img))[0],
-          int(i[0] * 100),
-          int(i[1] * 100),
+          int((i[0] - center[0]) * 25),
+          int((i[1] - center[1]) * 25),
           width,
           height
         ])
       else:
         image_positions.append([
           os.path.splitext(os.path.basename(img))[0],
-          int(i[0] * 100),
-          int(i[1] * 100),
-          int(i[2] * 100),
+          int((i[0] - center[0]) * 25),
+          int((i[1] - center[1]) * 25),
+          int((i[2] - center[2]) * 25),
           width,
           height
         ])
