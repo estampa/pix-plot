@@ -62,6 +62,7 @@ class PixPlot:
     self.errored_images = set()
     self.vector_files = []
     self.image_vectors = []
+    self.latent_vectors = []
     self.method = FLAGS.layout
     self.rewrite_image_thumbs = False
     self.rewrite_image_vectors = False
@@ -71,6 +72,8 @@ class PixPlot:
     self.create_image_thumbs()
     self.create_image_vectors()
     self.load_image_vectors()
+    # self.load_and_mix_image_vectors()
+    # self.load_and_mix_image_vectors_and_umap()
     self.write_json()
     self.create_atlas_files()
     print('Processed output for ' + \
@@ -225,6 +228,59 @@ class PixPlot:
     self.vector_files = glob( join(self.output_dir, 'image_vectors', '*') )
     for c, i in enumerate(self.vector_files):
       self.image_vectors.append(np.load(i))
+      print(' * loaded', c+1, 'of', len(self.vector_files), 'image vectors')
+
+
+  def load_and_mix_image_vectors_and_umap(self):
+    '''
+    Return all image vectors
+    '''
+    print(' * loading image vectors')
+    self.vector_files = glob( join(self.output_dir, 'image_vectors-inception', '*') )
+    for c, i in enumerate(self.vector_files):
+      vector_inception = np.load(i)
+      self.image_vectors.append(vector_inception)
+
+      filename = os.path.basename(i)
+      vector_latent_path = join(self.output_dir, 'image_vectors-latent', filename)
+      vector_latent = np.load(vector_latent_path)
+      vector_latent = np.float32(vector_latent)
+
+      self.latent_vectors.append(vector_latent)
+      print(' * loaded', c+1, 'of', len(self.vector_files), 'image vectors')
+
+    dim = FLAGS.dimensions
+    FLAGS.dimensions = 3
+    fit_model = self.build_model(self.image_vectors)
+    FLAGS.dimensions = dim
+
+
+    for c, i in enumerate(fit_model):
+      vector_latent = self.latent_vectors[c]
+      vector = np.concatenate((i, vector_latent))
+      self.image_vectors[c] = vector
+
+
+  def load_and_mix_image_vectors(self):
+    '''
+    Return all image vectors
+    '''
+    print(' * loading image vectors')
+    self.vector_files = glob( join(self.output_dir, 'image_vectors-inception', '*') )
+    for c, i in enumerate(self.vector_files):
+      filename = os.path.basename(i)
+      vector_latent_path = join(self.output_dir, 'image_vectors-latent', filename)
+
+      vector_inception = np.load(i)
+      vector_latent = np.load(vector_latent_path)
+      vector_latent = np.float32(vector_latent)
+      # print(type(vector_inception), vector_inception.dtype, vector_inception.shape)
+      # print(type(vector_latent), vector_latent.dtype, vector_latent.shape)
+      vector = np.concatenate((vector_inception, vector_latent))
+
+      # vector = vector_latent[0:3]
+
+      self.image_vectors.append(vector)
       print(' * loaded', c+1, 'of', len(self.vector_files), 'image vectors')
 
 
