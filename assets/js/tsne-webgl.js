@@ -23,15 +23,21 @@ var sizes = {
   }
 }
 
-// Count of 32px and 64px atlas files to fetch
-var atlasCounts = { '32px': null, '64px': null }
+// Format of the images
+var imageFormat = 'png';
+
+// Large atlas size
+var largeSize = 128;
+
+// Count of 32px, 64px and 128px atlas files to fetch
+var atlasCounts = { '32px': null, '64px': null, '128px': null }
 
 // Create a store for the load progress. Data structure:
 // {atlas0: percentLoaded, atlas1: percentLoaded}
 var loadProgress = {};
 
 // Create a store for the 32px and 64px atlas materials
-var materials = { 32: [], 64: [] }
+var materials = { 32: [], 64: [], 128: [] }
 
 // Many graphics cards only support 2**16 vertices per mesh,
 // and each image requires 4 distinct vertices
@@ -64,7 +70,8 @@ var textureLoader = new AjaxTextureLoader();
 
 function getScene() {
   var scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x111111);
+//  scene.background = new THREE.Color(0x111111);
+  scene.background = new THREE.Color(0xede7d2);
   return scene;
 }
 
@@ -226,7 +233,7 @@ function parseImage(img) {
       name: img[0],
       x: img[1],
       y: img[2],
-      z: img[3],
+      z: img[3] + 500,
       width: img[4],
       height: img[5],
       xOffset: (sizes.image.width - img[4])/2,
@@ -313,8 +320,8 @@ function getImagePositionData(img, idx) {
   if (img.z) {
     return {
       x: img.x * 15,
-      y: img.y * 12,
-      z: img.z * 9
+      y: img.y * 15,
+      z: img.z * 15
     }
   } else {
     return {
@@ -410,7 +417,7 @@ function getImageMeshData(idx) {
 
 function loadAtlasFiles() {
   for (var i=0; i<atlasCounts['32px']; i++) {
-    var url = dataUrl + 'atlas_files/32px/atlas-' + i + '.jpg';
+    var url = dataUrl + 'atlas_files/32px/atlas-' + i + '.' + imageFormat;
     textureLoader.load(url, handleTexture.bind(null, i),
       onProgress.bind(null, i))
   }
@@ -647,17 +654,17 @@ function buildMesh(geometry, materials) {
 
 function loadLargeAtlasFiles() {
   sizes.image = {
-    width: 64,
-    height: 64
+    width: largeSize,
+    height: largeSize
   }
   sizes.atlas = {
     width: 2048,
     height: 2048,
-    cols: 2048 / 64,
-    rows: 2048 / 64
+    cols: 2048 / largeSize,
+    rows: 2048 / largeSize
   }
-  for (var i=0; i<atlasCounts['64px']; i++) {
-    var url = dataUrl + 'atlas_files/64px/atlas-' + i + '.jpg';
+  for (var i=0; i<atlasCounts[largeSize + 'px']; i++) {
+    var url = dataUrl + 'atlas_files/' + largeSize + 'px/atlas-' + i + '.' + imageFormat;
     textureLoader.load(url, handleLargeTexture.bind(null, i))
   }
 }
@@ -673,7 +680,7 @@ function loadLargeAtlasFiles() {
 
 function handleLargeTexture(atlasIndex, texture) {
   var material = new THREE.MeshBasicMaterial({ map: texture });
-  materials['64'][atlasIndex] = material;
+  materials[largeSize + ''][atlasIndex] = material;
   updateImages(atlasIndex)
 }
 
@@ -695,7 +702,7 @@ function updateImages(atlasIndex) {
   // Identify the index position for the new atlas file
   var materialIndex = meshes[meshIndex].material.length;
   // Add the new atlas to its mesh
-  meshes[meshIndex].material.push( materials['64'][atlasIndex] )
+  meshes[meshIndex].material.push( materials[largeSize + ''][atlasIndex] )
   // Request an update for this material
   meshes[meshIndex].material[materialIndex].needsUpdate = true;
   // Grab the geometry to which we added the new atlas
@@ -732,10 +739,10 @@ function getAtlasImages(atlasIdx, materialIdx) {
     // Fetch this image from the global image store & copy to avoid mutations
     var img = Object.assign({}, imageData[d]);
     // Update the height, width, and x,y offsets for the image
-    img.width *= 2;
-    img.height *= 2;
-    img.xOffset *= 2;
-    img.yOffset *= 2;
+    img.width *= largeSize / 32;
+    img.height *= largeSize / 32;
+    img.xOffset *= largeSize / 32;
+    img.yOffset *= largeSize / 32;
     // Get atlas information for this image
     var atlas = getImageAtlasData(img.idx);
     // Get image uv position for this image
