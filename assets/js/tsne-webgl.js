@@ -45,6 +45,7 @@ var materials = { 32: [], 64: [], 128: [] }
 
 // Many graphics cards only support 2**16 vertices per mesh,
 // and each image requires 4 distinct vertices
+// var imagesPerMesh = 1;
 var imagesPerMesh = 2**14;
 
 // Create a store for meshes
@@ -458,7 +459,7 @@ function onProgress(atlasIndex, xhr) {
  **/
 
 function handleTexture(textureIndex, texture) {
-  var material = new THREE.MeshBasicMaterial({ map: texture });
+  var material = new THREE.MeshBasicMaterial({ map: texture, transparent: true });
   materials['32'][textureIndex] = material;
   startIfReady();
 }
@@ -501,19 +502,26 @@ function startIfReady() {
 
 function buildGeometry() {
   var meshCount = Math.ceil( imageDataKeys.length / imagesPerMesh );
+  var position = {x:0, y:0, z:0}
   for (var i=0; i<meshCount; i++) {
     var geometry = new THREE.Geometry();
     var meshImages = imageDataKeys.slice(i*imagesPerMesh, (i+1)*imagesPerMesh);
     for (var j=0; j<meshImages.length; j++) {
       var datum = imageData[ meshImages[j] ];
-      geometry = updateVertices(geometry, datum);
+      if (imagesPerMesh === 1) {
+        position.x = datum.pos.x;
+        position.y = datum.pos.y;
+        position.z = datum.pos.z;
+      }
+      geometry = updateVertices(geometry, datum, position);
       geometry = updateFaces(geometry);
       geometry = updateFaceVertexUvs(geometry, datum);
     }
     var startMaterial = imageData[ meshImages[0] ].atlas.index;
     var endMaterial = imageData[ meshImages[j-1] ].atlas.index;
-    buildMesh(geometry, materials['32'].slice(startMaterial, endMaterial + 1));
+    buildMesh(geometry, materials['32'].slice(startMaterial, endMaterial + 1), position);
   }
+  console.log(meshCount);
   requestAnimationFrame(animate);
   removeLoaderScene();
   loadLargeAtlasFiles();
@@ -527,31 +535,33 @@ function buildGeometry() {
  * @param {obj} geometry: A three.js geometry
  * @param {obj} img: An object whose `pos` property contains
  *   attributes used to set the image's vertex positions
+ * @param {obj} pos: An object whose `pos` property contains
+ *   attributes used to set the object's vertex positions
  * @returns {obj} geometry: The input geometry updated to
  *   contain the new image's vertices
  **/
 
-function updateVertices(geometry, img) {
+function updateVertices(geometry, img, pos) {
   geometry.vertices.push(
     new THREE.Vector3(
-      img.pos.x,
-      img.pos.y,
-      img.pos.z
+      img.pos.x - pos.x,
+      img.pos.y - pos.y,
+      img.pos.z - pos.z
     ),
     new THREE.Vector3(
-      img.pos.x + (img.width * 2),
-      img.pos.y,
-      img.pos.z
+      img.pos.x - pos.x + (img.width * 2),
+      img.pos.y - pos.y,
+      img.pos.z - pos.z
     ),
     new THREE.Vector3(
-      img.pos.x + (img.width * 2),
-      img.pos.y + (img.height * 2),
-      img.pos.z
+      img.pos.x - pos.x + (img.width * 2),
+      img.pos.y - pos.y + (img.height * 2),
+      img.pos.z - pos.z
     ),
     new THREE.Vector3(
-      img.pos.x,
-      img.pos.y + (img.height * 2),
-      img.pos.z
+      img.pos.x - pos.x,
+      img.pos.y - pos.y + (img.height * 2),
+      img.pos.z - pos.z
     )
   );
   return geometry;
@@ -638,13 +648,13 @@ function updateFaceVertexUvs(geometry, img) {
  * @param {arr} materials: a list of three.js Material objects
  **/
 
-function buildMesh(geometry, materials) {
+function buildMesh(geometry, materials, position) {
   // Combine the image geometry and material list into a mesh
   var mesh = new THREE.Mesh(geometry, materials);
   // Store the index position of the image and the mesh
   mesh.userData.meshIndex = meshes.length;
   // Set the position of the image mesh in the x,y,z dimensions
-  mesh.position.set(0,0,0)
+  mesh.position.set(position.x, position.y, position.z)
   // Add the image to the scene
   scene.add(mesh);
   // Save this mesh
@@ -683,7 +693,7 @@ function loadLargeAtlasFiles() {
  **/
 
 function handleLargeTexture(atlasIndex, texture) {
-  var material = new THREE.MeshBasicMaterial({ map: texture });
+  var material = new THREE.MeshBasicMaterial({ map: texture, transparent: true });
   materials[largeSize + ''][atlasIndex] = material;
   updateImages(atlasIndex)
 }
