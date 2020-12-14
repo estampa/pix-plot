@@ -96,6 +96,7 @@ function getCamera() {
   var aspectRatio = window.innerWidth / window.innerHeight;
   var camera = new THREE.PerspectiveCamera(75, aspectRatio, 100, 50000);
   camera.position.set(0, -1000, 12000);
+  camera.lookAt(0, 0, 0);
   return camera;
 }
 
@@ -137,10 +138,14 @@ function getRenderer() {
  **/
 
 function getControls(camera, renderer) {
-  var controls = new THREE.TrackballControls(camera, renderer.domElement);
-  controls.zoomSpeed = 0.05;
-  controls.panSpeed = 0.1;
-  controls.rotateSpeed = 0;
+  // var controls = new THREE.TrackballControls(camera, renderer.domElement);
+  // controls.zoomSpeed = 0.05;
+  // controls.panSpeed = 0.1;
+  // controls.rotateSpeed = 0;
+  var controls = new THREE.FlyControls(camera, renderer.domElement);
+  controls.movementSpeed = 1000;
+  controls.rollSpeed = Math.PI / 12;
+  controls.dragToLook = true;
   return controls;
 }
 
@@ -521,7 +526,6 @@ function buildGeometry() {
     var endMaterial = imageData[ meshImages[j-1] ].atlas.index;
     buildMesh(geometry, materials['32'].slice(startMaterial, endMaterial + 1), position);
   }
-  console.log(meshCount);
   requestAnimationFrame(animate);
   removeLoaderScene();
   loadLargeAtlasFiles();
@@ -829,8 +833,6 @@ function updateImages_1imagePerMesh(atlasIndex) {
     meshes[meshIndex].geometry.uvsNeedUpdate = true;
     meshes[meshIndex].geometry.groupsNeedUpdate = true;
     meshes[meshIndex].geometry.verticesNeedUpdate = true;
-
-    console.log(meshIndex);
   })
 
 }
@@ -1050,9 +1052,13 @@ function animate() {
   requestAnimationFrame(animate);
   stats.begin();
   TWEEN.update();
+  for ( let i = 0; i < meshes.length; i ++ ) {
+    meshes[ i ].lookAt( camera.position );
+  }
   raycaster.setFromCamera(mouse, camera);
   renderer.render(scene, camera);
-  controls.update();
+  const delta = clock.getDelta();
+  controls.update(delta);
   stats.end();
 }
 
@@ -1060,6 +1066,7 @@ function animate() {
  * Main
  **/
 
+const clock = new THREE.Clock();
 var scene = getScene();
 var camera = getCamera();
 var light = getLight(scene);
