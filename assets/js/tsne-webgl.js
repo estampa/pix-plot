@@ -13,6 +13,9 @@ var imageDataKeys = [];
 // Identify data endpoint
 var dataUrl = 'output/';
 
+// Large atlas size
+var largeSize = 128;
+
 // Create global stores for image and atlas sizes
 var sizes = {
   image: {
@@ -30,9 +33,6 @@ var sizes = {
 // Format of the images
 var imageFormat = 'png';
 
-// Large atlas size
-var largeSize = 128;
-
 // Count of 32px, 64px and 128px atlas files to fetch
 var atlasCounts = { '32px': null, '64px': null, '128px': null }
 
@@ -45,8 +45,8 @@ var materials = { 32: [], 64: [], 128: [] }
 
 // Many graphics cards only support 2**16 vertices per mesh,
 // and each image requires 4 distinct vertices
-// var imagesPerMesh = 1;
-var imagesPerMesh = 2**14;
+var imagesPerMesh = 1;
+// var imagesPerMesh = 2**14;
 
 // Create a store for meshes
 var meshes = [];
@@ -707,29 +707,36 @@ function handleLargeTexture(atlasIndex, texture) {
  **/
 
 function updateImages(atlasIndex) {
-  // Identify the number of images within a larger atlas file
-  var imagesPerAtlas = sizes.atlas.cols * sizes.atlas.rows;
-  // Identify the number of larger atlas files per mesh
-  var atlasFilesPerMesh = imagesPerMesh / imagesPerAtlas;
-  // Identify the mesh to which this atlas should be added
-  var meshIndex = Math.floor( atlasIndex / atlasFilesPerMesh );
-  // Identify the index position for the new atlas file
-  var materialIndex = meshes[meshIndex].material.length;
-  // Add the new atlas to its mesh
-  meshes[meshIndex].material.push( materials[largeSize + ''][atlasIndex] )
-  // Request an update for this material
-  meshes[meshIndex].material[materialIndex].needsUpdate = true;
-  // Grab the geometry to which we added the new atlas
-  var geometry = meshes[meshIndex].geometry;
-  // Retrieve an object that describes the images in the new atlas
-  getAtlasImages(atlasIndex, materialIndex).forEach(function(img) {
-    // Update the faceVertexUvs for each image to be updated
-    geometry = updateFaceVertexUvs(geometry, img);
-  })
-  meshes[meshIndex].geometry = geometry;
-  meshes[meshIndex].geometry.uvsNeedUpdate = true;
-  meshes[meshIndex].geometry.groupsNeedUpdate = true;
-  meshes[meshIndex].geometry.verticesNeedUpdate = true;
+  if (imagesPerMesh === 1) {
+    // Si cada imatges és un objecte
+    updateImages_1imagePerMesh(atlasIndex);
+  } else {
+    // Si cada objecte usa diferents atlas
+
+    // Identify the number of images within a larger atlas file
+    var imagesPerAtlas = sizes.atlas.cols * sizes.atlas.rows;
+    // Identify the number of larger atlas files per mesh
+    var atlasFilesPerMesh = imagesPerMesh / imagesPerAtlas;
+    // Identify the mesh to which this atlas should be added
+    var meshIndex = Math.floor(atlasIndex / atlasFilesPerMesh);
+    // Identify the index position for the new atlas file
+    var materialIndex = meshes[meshIndex].material.length;
+    // Add the new atlas to its mesh
+    meshes[meshIndex].material.push(materials[largeSize + ''][atlasIndex])
+    // Request an update for this material
+    meshes[meshIndex].material[materialIndex].needsUpdate = true;
+    // Grab the geometry to which we added the new atlas
+    var geometry = meshes[meshIndex].geometry;
+    // Retrieve an object that describes the images in the new atlas
+    getAtlasImages(atlasIndex, materialIndex).forEach(function (img) {
+      // Update the faceVertexUvs for each image to be updated
+      geometry = updateFaceVertexUvs(geometry, img);
+    })
+    meshes[meshIndex].geometry = geometry;
+    meshes[meshIndex].geometry.uvsNeedUpdate = true;
+    meshes[meshIndex].geometry.groupsNeedUpdate = true;
+    meshes[meshIndex].geometry.verticesNeedUpdate = true;
+  }
 }
 
 /**
@@ -772,6 +779,62 @@ function getAtlasImages(atlasIdx, materialIdx) {
   })
   return images;
 }
+
+function updateImages_1imagePerMesh(atlasIndex) {
+
+  // Compute the number of images in each larger atlas
+  var imgsPerAtlas = sizes.atlas.rows * sizes.atlas.cols;
+  // Find the index positions of the first and last images in this atlas
+  var startImage = atlasIndex * imgsPerAtlas;
+  var endImage = (atlasIndex + 1) * imgsPerAtlas;
+  // Return a list of images in this atlas after updating the attributes of each
+  imageDataKeys.slice(startImage, endImage).forEach(function(d) {
+
+    // Fetch this image from the global image store & copy to avoid mutations
+    var img = Object.assign({}, imageData[d]);
+
+    // Identify the mesh to which this atlas should be added
+    var meshIndex = img.mesh.idx;
+    // Identify the index position for the new atlas file
+    var materialIndex = meshes[meshIndex].material.length;
+    // Add the new atlas to its mesh
+    meshes[meshIndex].material.push(materials[largeSize + ''][atlasIndex])
+    // Request an update for this material
+    meshes[meshIndex].material[materialIndex].needsUpdate = true;
+    // Grab the geometry to which we added the new atlas
+    var geometry = meshes[meshIndex].geometry;
+
+
+    // Update the height, width, and x,y offsets for the image
+    img.width *= largeSize / 32;
+    img.height *= largeSize / 32;
+    img.xOffset *= largeSize / 32;
+    img.yOffset *= largeSize / 32;
+    // Get atlas information for this image
+    var atlas = getImageAtlasData(img.idx);
+    // Get image uv position for this image
+    var uv = getImageUvData(img, img.idx, atlas);
+    // Get the index position of the material within this image's mesh
+    var material = {idx: materialIndex}
+    // Update the image's data attributes
+    img.atlas = atlas;
+    img.uv = uv;
+    img.material = material;
+    imageData[ imageDataKeys[img.idx] ] = img;
+
+    // Update the faceVertexUvs for each image to be updated
+    geometry = updateFaceVertexUvs(geometry, img);
+
+    meshes[meshIndex].geometry = geometry;
+    meshes[meshIndex].geometry.uvsNeedUpdate = true;
+    meshes[meshIndex].geometry.groupsNeedUpdate = true;
+    meshes[meshIndex].geometry.verticesNeedUpdate = true;
+
+    console.log(meshIndex);
+  })
+
+}
+
 
 /**
  * Transition from loading scene to plot scene
