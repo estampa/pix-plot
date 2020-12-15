@@ -57,7 +57,8 @@ class PixPlot:
 
     self.image_files = image_glob
     self.output_dir = FLAGS.output_folder
-    self.sizes = [32, 64]  # eliminats 16 i 128
+    self.sizes = [32, 64, 128]  # eliminats 16 i 128
+    self.format = 'png'
     self.n_clusters = FLAGS.clusters
     self.errored_images = set()
     self.vector_files = []
@@ -74,6 +75,9 @@ class PixPlot:
     self.load_image_vectors()
     # self.load_and_mix_image_vectors()
     # self.load_and_mix_image_vectors_and_umap()
+
+    # self.build_model(self.image_vectors)
+
     self.write_json()
     self.create_atlas_files()
     print('Processed output for ' + \
@@ -135,7 +139,7 @@ class PixPlot:
       out_paths = []
       for i in sorted(self.sizes, key=int, reverse=True):
         out_dir = join(self.output_dir, 'thumbs', str(i) + 'px')
-        out_path = join( out_dir, get_filename(j) + '.jpg' )
+        out_path = join( out_dir, get_filename(j) + '.' + self.format )
         if os.path.exists(out_path) and not self.rewrite_image_thumbs:
           continue
         sizes.append(i)
@@ -296,7 +300,7 @@ class PixPlot:
 
     elif self.method == 'umap':
       # model = UMAP(n_neighbors=25, min_dist=0.00001, metric='correlation')
-      model = UMAP(n_components=FLAGS.dimensions, n_neighbors=750, min_dist=1, metric='euclidean')
+      model = UMAP(n_components=FLAGS.dimensions, n_neighbors=2000, min_dist=2, metric='euclidean', verbose=True)
       # model = UMAP(n_components=FLAGS.dimensions, n_neighbors=25, min_dist=0.00001, metric='correlation')
 
       # for n_neighbors in (2, 5, 10, 20, 50, 100, 200, 500):
@@ -304,8 +308,8 @@ class PixPlot:
       #     for metric in ('euclidean', 'correlation', 'cosine'):
       #       self.draw_umap(np.array(image_vectors), n_neighbors, min_dist, FLAGS.dimensions, metric)
 
-      # for n_neighbors in (250, 500, 750, 1000):
-      #   for min_dist in (0.25, 0.5, 0.75, 1):
+      # for n_neighbors in (500, 1000, 2000):
+      #   for min_dist in (0.5, 1, 2):
       #     for metric in ('euclidean', 'correlation', 'cosine'):
       #       self.draw_umap(np.array(image_vectors), n_neighbors, min_dist, FLAGS.dimensions, metric)
 
@@ -350,7 +354,7 @@ class PixPlot:
         continue
 
       filename, file_extension = os.path.splitext(img)
-      thumb_path = join(self.output_dir, 'thumbs', '32px', filename + ".jpg")
+      thumb_path = join(self.output_dir, 'thumbs', '32px', filename + "." + self.format)
       with Image.open(thumb_path) as image:
         width, height = image.size
       # Add the image name, x offset, y offset
@@ -415,7 +419,8 @@ class PixPlot:
     file_count = len(self.vector_files)
     return {
       '32px': ceil( file_count / (64**2) ),
-      '64px': ceil( file_count / (32**2) )
+      '64px': ceil( file_count / (32**2) ),
+      '128px': ceil( file_count / (16**2) )
     }
 
 
@@ -439,7 +444,7 @@ class PixPlot:
     thumb_dir = join(self.output_dir, 'thumbs', str(thumb_size) + 'px')
     with open(join(self.output_dir, 'plot_data.json')) as f:
       for i in json.load(f)['positions']:
-        thumbs.append( join(thumb_dir, i[0] + '.jpg') )
+        thumbs.append( join(thumb_dir, i[0] + '.' + self.format) )
     return thumbs
 
 
@@ -464,7 +469,7 @@ class PixPlot:
     # generate a directory for images at this size if it doesn't exist
     for idx, atlas_images in enumerate(atlas_image_groups):
       print(' * creating atlas', idx + 1, 'at size', thumb_size)
-      out_path = join(out_dir, 'atlas-' + str(idx) + '.jpg')
+      out_path = join(out_dir, 'atlas-' + str(idx) + '.' + self.format)
       # write a file containing a list of images for the current montage
       tmp_file_path = join(self.output_dir, 'images_to_montage.txt')
       with codecs.open(tmp_file_path, 'w', encoding='utf-8') as out:
