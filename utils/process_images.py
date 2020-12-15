@@ -21,7 +21,7 @@ from multiprocessing import Pool
 from six.moves import urllib
 from os.path import join
 from PIL import Image
-from umap import UMAP
+import umap.umap_ as umap
 from math import ceil
 from glob import glob
 import tensorflow as tf
@@ -300,7 +300,13 @@ class PixPlot:
 
     elif self.method == 'umap':
       # model = UMAP(n_neighbors=25, min_dist=0.00001, metric='correlation')
-      model = UMAP(n_components=FLAGS.dimensions, n_neighbors=2000, min_dist=2, metric='euclidean', verbose=True)
+
+      umap.UMAP()
+      fit = umap.UMAP(n_components=FLAGS.dimensions, n_neighbors=2000, min_dist=2, spread=2, metric='euclidean', verbose=True)
+
+      model = fit.fit_transform(np.array(image_vectors))
+
+
       # model = UMAP(n_components=FLAGS.dimensions, n_neighbors=25, min_dist=0.00001, metric='correlation')
 
       # for n_neighbors in (2, 5, 10, 20, 50, 100, 200, 500):
@@ -313,7 +319,7 @@ class PixPlot:
       #     for metric in ('euclidean', 'correlation', 'cosine'):
       #       self.draw_umap(np.array(image_vectors), n_neighbors, min_dist, FLAGS.dimensions, metric)
 
-      return model.fit_transform( np.array(image_vectors) )
+      return model
 
   def draw_umap(self, data, n_neighbors=15, min_dist=0.1, n_components=2, metric='euclidean', title=''):
     fit = UMAP(
