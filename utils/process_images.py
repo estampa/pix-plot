@@ -302,7 +302,8 @@ class PixPlot:
       # model = UMAP(n_neighbors=25, min_dist=0.00001, metric='correlation')
 
       umap.UMAP()
-      fit = umap.UMAP(n_components=FLAGS.dimensions, n_neighbors=2000, min_dist=2, spread=2, metric='euclidean', verbose=True)
+      fit = umap.UMAP(n_components=FLAGS.dimensions, n_neighbors=2000, min_dist=2, spread=2, metric='euclidean',
+                      random_state=27)
 
       model = fit.fit_transform(np.array(image_vectors))
 
