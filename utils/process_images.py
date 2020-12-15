@@ -35,6 +35,7 @@ import psutil
 import subprocess
 import codecs
 import h5py
+import scipy
 
 import matplotlib.pyplot as plt
 
@@ -61,6 +62,8 @@ class PixPlot:
     self.sizes = [32, 64, 128]  # eliminats 16 i 128
     self.format = 'png'
     self.n_clusters = FLAGS.clusters
+    self.centroid_paths = []
+    self.centroid_points = []
     self.errored_images = set()
     self.vector_files = []
     self.image_vectors = []
@@ -74,13 +77,9 @@ class PixPlot:
     self.create_image_thumbs()
     self.create_image_vectors()
     self.load_image_vectors()
-    # self.load_and_mix_image_vectors()
-    # self.load_and_mix_image_vectors_and_umap()
-
-    # self.build_model(self.image_vectors)
-
     self.write_json()
-    self.create_atlas_files()
+    self.write_path_json()
+    ################### self.create_atlas_files()
     print('Processed output for ' + \
       str(len(self.image_files) - len(self.errored_images)) + ' images')
 
@@ -390,6 +389,13 @@ class PixPlot:
           width,
           height
         ])
+
+        if img in self.centroid_paths:
+          self.centroid_points.append([
+            int((i[0] - center[0]) * 25),
+            int((i[1] - center[1]) * 25),
+            int((i[2] - center[2]) * 25),
+          ])
     return image_positions
 
 
@@ -403,13 +409,14 @@ class PixPlot:
     X = np.array(self.image_vectors)
     fit_model = model.fit(X)
     centroids = fit_model.cluster_centers_
+
     # find the points closest to the cluster centroids
     closest, _ = pairwise_distances_argmin_min(centroids, X)
-    centroid_paths = [self.vector_files[i] for i in closest]
+    self.centroid_paths = [get_filename(self.vector_files[i]) for i in closest]
     centroid_json = []
-    for c, i in enumerate(centroid_paths):
+    for c, i in enumerate(self.centroid_paths):
       centroid_json.append({
-        'img': get_filename(i),
+        'img': i,
         'label': 'Cluster ' + str(c+1)
       })
     return centroid_json
@@ -429,6 +436,53 @@ class PixPlot:
         'atlas_counts': self.get_atlas_counts(),
       }, out)
 
+
+  def write_path_json(self):
+    '''
+    Write a JSON file with image positions, the number of atlas files
+    in each size, and the centroids of the k means clusters
+    '''
+    print(' * writing path JSON')
+    out_path = join(self.output_dir, 'path_data.json')
+    with open(out_path, 'w') as out:
+      json.dump({
+        'path': self.get_path(),
+      }, out)
+
+  def get_path(self):
+    npoints = np.array(self.centroid_points).squeeze()
+    print(npoints.shape)
+    npoints_sw = np.swapaxes(npoints, 0, 1)
+    print(npoints_sw.shape)
+
+    n_points = len(self.centroid_points)
+
+    i = np.arange(n_points)
+
+    fps = 25
+    smoothing = 1
+
+    # Posem els frames distribuïts en funció de la distància entre punts
+    interp_i = np.array([])
+    for idx in range(n_points - 1):
+      src_latent = np.array(self.centroid_points[idx])
+      dst_latent = np.array(self.centroid_points[idx + 1])
+      dist = np.linalg.norm(src_latent - dst_latent)
+      num_frames = round(fps * dist * smoothing / 10)
+      curr_interp_i = np.linspace(idx, idx + 1 - (1 / num_frames), num_frames)
+      interp_i = np.concatenate((interp_i, curr_interp_i))
+
+    dimensions = npoints_sw.shape[0]
+
+    latents_sw = np.zeros((dimensions, interp_i.shape[0]))
+    for dim in range(dimensions):
+      latents_sw[dim] = scipy.interpolate.interp1d(i, npoints_sw[dim], kind='cubic')(interp_i)
+
+    latents = np.swapaxes(latents_sw, 0, 1)
+
+    print(latents.shape)
+
+    return latents.tolist()
 
   def get_atlas_counts(self):
     file_count = len(self.vector_files)
