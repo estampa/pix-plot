@@ -34,6 +34,7 @@ import tarfile
 import psutil
 import subprocess
 import codecs
+import h5py
 
 import matplotlib.pyplot as plt
 
@@ -301,12 +302,19 @@ class PixPlot:
     elif self.method == 'umap':
       # model = UMAP(n_neighbors=25, min_dist=0.00001, metric='correlation')
 
-      umap.UMAP()
-      fit = umap.UMAP(n_components=FLAGS.dimensions, n_neighbors=2000, min_dist=2, spread=2, metric='euclidean',
-                      random_state=27)
+      umap_path = os.path.join(self.output_dir, 'umap.h5')
+      if os.path.exists(umap_path):
+        in_f = h5py.File(umap_path, 'r')
+        model = in_f['model']
+      else:
+        umap.UMAP()
+        fit = umap.UMAP(n_components=FLAGS.dimensions, n_neighbors=2000, min_dist=2, spread=2, metric='euclidean',
+                        random_state=27)
 
-      model = fit.fit_transform(np.array(image_vectors))
+        model = fit.fit_transform(np.array(image_vectors))
 
+        with h5py.File(umap_path, "w") as out_f:
+          out_f.create_dataset("model", data=model)
 
       # model = UMAP(n_components=FLAGS.dimensions, n_neighbors=25, min_dist=0.00001, metric='correlation')
 
