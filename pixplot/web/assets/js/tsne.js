@@ -3544,6 +3544,10 @@ function Tooltip() {
       text: 'Cluster images via UMAP dimensionality reduction',
     },
     {
+      elem: document.querySelector('#layout-umap3d'),
+      text: 'Cluster images via UMAP dimensionality reduction in 3D',
+    },
+    {
       elem: document.querySelector('#layout-grid'),
       text: 'Represent UMAP clusters on a grid',
     },
