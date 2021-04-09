@@ -702,7 +702,7 @@ def get_pointgrid_layout(dimensions, path, label, **kwargs):
     xjyj = align_points_to_grid(arr[:,0:2], fill=0.045)  # Fem el jitter a x i y
     xjyjz = np.concatenate((xjyj, arr[:, 2:]), axis=1)  # Posem el resultat amb la z original
     yjzj = align_points_to_grid(xjyjz[:,1:3], fill=0.045)  # Fem el jitter a yj i z
-    xjyjzj = np.concatenate((xjyj, yjzj[:, 2:]), axis=1)  # Posem el resultat amb la z nova i la y del primer jitter
+    xjyjzj = np.concatenate((xjyj, yjzj[:, 1:]), axis=1)  # Posem el resultat amb la z nova i la y del primer jitter
     z = xjyjzj
 
   return write_layout(out_path, z, **kwargs)
