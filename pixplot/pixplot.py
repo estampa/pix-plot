@@ -121,6 +121,7 @@ config = {
 
 def process_images(**kwargs):
   '''Main method for processing user images and metadata'''
+  print("******************************* [process_images]")
   np.random.seed(kwargs['seed'])
   tf.compat.v1.set_random_seed(kwargs['seed'])
   copy_web_assets(**kwargs)
@@ -134,16 +135,20 @@ def process_images(**kwargs):
 
 def copy_web_assets(**kwargs):
   '''Copy the /web directory from the pixplot source to the users cwd'''
+  print("******************************* [copy_web_assets]")
   src = join(dirname(realpath(__file__)), 'web')
   dest = join(os.getcwd(), kwargs['out_dir'])
-  copy_tree(src, dest)
-  # write version numbers into output
-  for i in ['index.html', os.path.join('assets', 'js', 'tsne.js')]:
-    path = os.path.join(dest, i)
-    with open(path, 'r') as f:
-      f = f.read().replace('VERSION_NUMBER', get_version())
-      with open(path, 'w') as out:
-        out.write(f)
+  if not os.path.isdir(dest):
+    copy_tree(src, dest)
+    # write version numbers into output
+    # TODO: canviar el directori d'output
+    for i in ['index.html', os.path.join('assets', 'js', 'tsne.js')]:
+      path = os.path.join(dest, i)
+      with open(path, 'r') as f:
+        f = f.read().replace('VERSION_NUMBER', get_version())
+        with open(path, 'w') as out:
+          out.write(f)
+
   if kwargs['copy_web_only']: sys.exit()
 
 
@@ -154,6 +159,7 @@ def copy_web_assets(**kwargs):
 
 def filter_images(**kwargs):
   '''Main method for filtering images given user metadata (if provided)'''
+  print("******************************* [filter_images]")
   # validate that input image names are unique
   image_paths = set()
   duplicates = set()
@@ -178,28 +184,30 @@ def filter_images(**kwargs):
         shutil.copy(i, target_path)
     image_paths = subdivide_images_with_openpose(image_paths=image_paths, **kwargs)
   # process and filter the images
-  filtered_image_paths = []
-  for i in stream_images(image_paths=image_paths):
-    # get image height and width
-    w, h = i.original.size
-    # remove images with 0 height or width when resized to lod height
-    if (h == 0) or (w == 0):
-      print(' * skipping {} because it contains 0 height or width'.format(i.path))
-      continue
-    # remove images that have 0 height or width when resized
-    try:
-      resized = i.resize_to_max(kwargs['lod_cell_height'])
-    except ValueError:
-      print(' * skipping {} because it contains 0 height or width when resized'.format(i.path))
-      continue
-    except OSError:
-      print(' * skipping {} because it could not be resized'.format(i.path))
-      continue
-    # remove images that are too wide for the atlas
-    if (w/h) > (kwargs['atlas_size']/kwargs['cell_size']):
-      print(' * skipping {} because its dimensions are oblong'.format(i.path))
-      continue
-    filtered_image_paths.append(i.path)
+  filtered_image_paths = image_paths
+  # TODO: try to avoid it if it has already been done
+  # filtered_image_paths = []
+  # for i in stream_images(image_paths=image_paths):
+  #   # get image height and width
+  #   w, h = i.original.size
+  #   # remove images with 0 height or width when resized to lod height
+  #   if (h == 0) or (w == 0):
+  #     print(' * skipping {} because it contains 0 height or width'.format(i.path))
+  #     continue
+  #   # remove images that have 0 height or width when resized
+  #   try:
+  #     resized = i.resize_to_max(kwargs['lod_cell_height'])
+  #   except ValueError:
+  #     print(' * skipping {} because it contains 0 height or width when resized'.format(i.path))
+  #       continue
+  #     except OSError:
+  #       print(' * skipping {} because it could not be resized'.format(i.path))
+  #     continue
+  #   # remove images that are too wide for the atlas
+  #   if (w/h) > (kwargs['atlas_size']/kwargs['cell_size']):
+  #     print(' * skipping {} because its dimensions are oblong'.format(i.path))
+  #     continue
+  #   filtered_image_paths.append(i.path)
   # if there are no remaining images, throw an error
   if len(filtered_image_paths) == 0:
     raise Exception('No images were found! Please check your input image glob.')
@@ -248,9 +256,7 @@ def get_image_paths(**kwargs):
           try:
             Manifest(url=i).save_images(limit=1)
           except:
-            print(' * could not download url ' + i)
-      image_paths = sorted(glob2.glob(os.path.join('iiif-downloads', 'images', '*')))
-  # handle case where images flag points to a glob of images
+            print(' * could not download url ' + i)  # handle case where images flag points to a glob of images
   if not image_paths:
     image_paths = sorted(glob2.glob(kwargs['images']))
   # handle case user provided no images
@@ -379,6 +385,7 @@ def is_number(s):
 
 def get_manifest(**kwargs):
   '''Create and return the base object for the manifest output file'''
+  print("******************************* [get_manifest]")
   # load the atlas data
   atlas_data = json.load(open(join(kwargs['atlas_dir'], 'atlas_positions.json')))
   # store each cell's size and atlas position
@@ -392,7 +399,10 @@ def get_manifest(**kwargs):
   layouts = get_layouts(**kwargs)
   # create a heightmap for the umap layout
   if 'umap' in layouts and layouts['umap']:
-    get_heightmap(layouts['umap']['layout'], 'umap', **kwargs)
+    get_heightmap(2, layouts['umap']['layout'], 'umap', **kwargs)
+  # create a heightmap for the umap3d layout
+  if 'umap3d' in layouts and layouts['umap3d']:
+    get_heightmap(3, layouts['umap3d']['layout'], 'umap3d', **kwargs)
   # specify point size scalars
   point_sizes = {}
   point_sizes['min'] = 0
@@ -455,6 +465,7 @@ def get_atlas_data(**kwargs):
   Generate and save to disk all atlases to be used for this visualization
   If square, center each cell in an nxn square, else use uniform height
   '''
+  print("******************************* [get_atlas_data]")
   # if the atlas files already exist, load from cache
   out_dir = os.path.join(kwargs['out_dir'], 'atlases', kwargs['plot_id'])
   if os.path.exists(out_dir) and kwargs['use_cache'] and not kwargs.get('shuffle', False):
@@ -519,8 +530,10 @@ def save_atlas(atlas, out_dir, n):
 
 def get_layouts(**kwargs):
   '''Get the image positions in each projection'''
-  umap = get_umap_layout(**kwargs)
-  umap_jittered = get_pointgrid_layout(umap, 'umap', **kwargs)
+  umap = get_umap_layout(2, **kwargs)
+  umap_jittered = get_pointgrid_layout(2, umap, 'umap', **kwargs)
+  umap3d = get_umap_layout(3, **kwargs)
+  umap3d_jittered = get_pointgrid_layout(3, umap3d, 'umap3d', **kwargs)
   grid = get_rasterfairy_layout(umap=umap, **kwargs)
   pose = get_pose_layout(**kwargs)
   alphabetic = get_alphabetic_layout(**kwargs)
@@ -531,6 +544,10 @@ def get_layouts(**kwargs):
     'umap': {
       'layout': umap,
       'jittered': umap_jittered,
+    },
+    'umap3d': {
+      'layout': umap3d,
+      'jittered': umap3d_jittered,
     },
     'alphabetic': {
       'layout': alphabetic,
@@ -563,18 +580,18 @@ def get_inception_vectors(**kwargs):
       im = preprocess_input( img_to_array( i.original.resize((299,299)) ) )
       vec = model.predict(np.expand_dims(im, 0)).squeeze()
       np.save(vector_path, vec)
+      print(' * vectorized {}/{} images'.format(idx+1, len(kwargs['image_paths'])))
     vecs.append(vec)
-    print(' * vectorized {}/{} images'.format(idx+1, len(kwargs['image_paths'])))
   return np.array(vecs)
 
 
-def get_umap_layout(**kwargs):
+def get_umap_layout(dimensions, **kwargs):
   '''Get the x,y positions of images passed through a umap projection'''
+  print(' * creating UMAP layout (%d dimensions)' % dimensions)
   vecs = get_inception_vectors(**kwargs)
-  print(' * creating UMAP layout')
-  out_path = get_path('layouts', 'umap', **kwargs)
+  out_path = get_path('layouts', 'umap' if dimensions == 2 else 'umap3d', **kwargs)
   if os.path.exists(out_path) and kwargs['use_cache']: return out_path
-  model = get_umap_model(**kwargs)
+  model = get_umap_model(dimensions, **kwargs)
   # run PCA to reduce dimensionality of image vectors
   w = PCA(n_components=min(100, len(vecs))).fit_transform(vecs)
   # fetch categorical labels for images (if provided)
@@ -593,12 +610,13 @@ def get_umap_layout(**kwargs):
   return write_layout(out_path, z, **kwargs)
 
 
-def get_umap_model(**kwargs):
-  return UMAP(n_neighbors=kwargs['n_neighbors'],
-    min_dist=kwargs['min_distance'],
-    metric=kwargs['metric'],
-    random_state=kwargs['seed'],
-    transform_seed=kwargs['seed'])
+def get_umap_model(dimensions, **kwargs):
+  return UMAP(n_components=dimensions,
+              n_neighbors=kwargs['n_neighbors'],
+              min_dist=kwargs['min_distance'],
+              metric=kwargs['metric'],
+              random_state=kwargs['seed'],
+              transform_seed=kwargs['seed'])
 
 
 def get_tsne_layout(**kwargs):
@@ -672,13 +690,21 @@ def get_alphabetic_layout(**kwargs):
   return write_layout(out_path, z, **kwargs)
 
 
-def get_pointgrid_layout(path, label, **kwargs):
+def get_pointgrid_layout(dimensions, path, label, **kwargs):
   '''Gridify the positions in `path` and return the path to this new layout'''
   print(' * creating {} pointgrid'.format(label))
   out_path = get_path('layouts', label + '-jittered', **kwargs)
   if os.path.exists(out_path) and kwargs['use_cache']: return out_path
   arr = np.array(read_json(path, **kwargs))
-  z = align_points_to_grid(arr, fill=0.045)
+  if dimensions == 2:
+    z = align_points_to_grid(arr, fill=0.045)
+  else:
+    xjyj = align_points_to_grid(arr[:,0:2], fill=0.045)  # Fem el jitter a x i y
+    xjyjz = np.concatenate((xjyj, arr[:, 2:]), axis=1)  # Posem el resultat amb la z original
+    yjzj = align_points_to_grid(xjyjz[:,1:3], fill=0.045)  # Fem el jitter a yj i z
+    xjyjzj = np.concatenate((xjyj, yjzj[:, 2:]), axis=1)  # Posem el resultat amb la z nova i la y del primer jitter
+    z = xjyjzj
+
   return write_layout(out_path, z, **kwargs)
 
 
@@ -1237,17 +1263,28 @@ def get_cluster_model(**kwargs):
     return KMeans(n_clusters=kwargs['n_clusters'], random_state=kwargs['seed'])
 
 
-def get_heightmap(path, label, **kwargs):
+def get_heightmap(dimensions, path, label, **kwargs):
   '''Create a heightmap using the distribution of points stored at `path`'''
+  import matplotlib
+  matplotlib.use('Agg')
   import matplotlib.pyplot as plt
   X = read_json(path, **kwargs)
   if 'positions' in X: X = X['positions']
   X = np.array(X)
   # create kernel density estimate of distribution X
   nbins = 200
-  x, y = X.T
+  if dimensions == 2:
+    save_heightmap(X.T, nbins, label, plt, **kwargs)
+  else:
+    save_heightmap(X.T[(0,1),:], nbins, label + '-xy', plt, **kwargs)
+    save_heightmap(X.T[(0,2), :], nbins, label + '-xz', plt, **kwargs)
+    save_heightmap(X.T[(1,2), :], nbins, label + '-yz', plt, **kwargs)
+
+
+def save_heightmap(T, nbins, label, plt, **kwargs):
+  x, y = T
   xi, yi = np.mgrid[x.min():x.max():nbins*1j, y.min():y.max():nbins*1j]
-  zi = kde.gaussian_kde(X.T)(np.vstack([xi.flatten(), yi.flatten()]))
+  zi = kde.gaussian_kde(T)(np.vstack([xi.flatten(), yi.flatten()]))
   # create the plot
   fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(5,5))
   fig.subplots_adjust(0,0,1,1)
@@ -1262,6 +1299,7 @@ def get_heightmap(path, label, **kwargs):
 
 def write_images(**kwargs):
   '''Write all originals and thumbs to the output dir'''
+  print("******************************* [write_images]")
   for i in stream_images(**kwargs):
     filename = clean_filename(i.path)
     # copy original for lightbox
@@ -1357,6 +1395,7 @@ def parse():
   parser.add_argument('--n_clusters', type=int, default=config['n_clusters'], help='number of clusters to use when clustering with kmeans')
   parser.add_argument('--geojson', type=str, default=config['geojson'], help='path to a GeoJSON file with shapes to be rendered on a map')
   config.update(vars(parser.parse_args()))
+  print("******************************* [parse]")
   process_images(**config)
 
 if __name__ == '__main__':
