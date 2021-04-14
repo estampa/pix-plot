@@ -1,4 +1,4 @@
-// version: VERSION_NUMBER
+// version: 0.0.104
 
 /**
 *
@@ -363,7 +363,7 @@ function Cell(obj) {
   this.gridCoords = {}; // x, y pos of the cell in the lod grid (set by lod)
   this.x = obj.x;
   this.y = obj.y;
-  this.z = obj.z || this.getZ(obj.x, obj.y);
+  this.z = (obj.z || this.getZ(obj.x, obj.y)) + 2;
   this.tx = this.x; // target x position
   this.ty = this.y; // target y position
   this.tz = this.z; // target z position
@@ -616,7 +616,7 @@ Layout.prototype.set = function(layout, enableDelay) {
       for (var i=0; i<data.cells.length; i++) {
         data.cells[i].tx = pos[i][0];
         data.cells[i].ty = pos[i][1];
-        data.cells[i].tz = pos[i][2] || data.cells[i].getZ(pos[i][0], pos[i][1]);
+        data.cells[i].tz = (pos[i][2] || data.cells[i].getZ(pos[i][0], pos[i][1])) + 2;
         data.cells[i].setBuffer('targetPosition');
       }
       // set the target locations of lines
@@ -1444,7 +1444,7 @@ World.prototype.getInitialLocation = function() {
   return {
     x: 0, //this.center.x,
     y: 0, //this.center.y,
-    z: 2.0,
+    z: 4.0,
   }
 }
 
