@@ -40,10 +40,10 @@ setup(
     'Pillow>=6.1.0',
     'pointgrid>=0.0.2',
     'python-dateutil>=2.8.0',
-    'scikit-learn==0.21.3',
+    'scikit-learn',
     'scipy==1.4.0',
-    'tensorflow==1.14.0',
-    'umap-learn==0.4.0',
+    'tensorflow-gpu==1.14.0',
+    'umap-learn',
     'yale-dhlab-rasterfairy>=1.0.3',
     'yale-dhlab-keras-preprocessing>=1.1.1',
     'matplotlib'
