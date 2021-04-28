@@ -77,7 +77,7 @@ function Config() {
     window.location.hostname.includes('0.0.0.0') ||
     window.location.hostname.includes('[::]');
 
-  if (typeof pixplotConfig === 'undefined') {
+  if (typeof pixplotConfig !== 'undefined') {
     this.data = Object.assign({}, this.data, pixplotConfig.data);
   }
 }
@@ -3834,7 +3834,7 @@ function getCanvasSize() {
 
 function getPath(path) {
   var base = window.location.origin;
-  base += window.location.pathname.replace('index.html', '');
+  base += window.location.pathname.replace(/[^/]*$/, '');
   base += path.replace('\\','/').replace(config.data.output_directory + '/', '');
   return base;
 }
