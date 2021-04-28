@@ -76,6 +76,10 @@ function Config() {
     window.location.hostname.includes('127.0.0.1') ||
     window.location.hostname.includes('0.0.0.0') ||
     window.location.hostname.includes('[::]');
+
+  if (typeof pixplotConfig === 'undefined') {
+    this.data = Object.assign({}, this.data, pixplotConfig.data);
+  }
 }
 
 /**
