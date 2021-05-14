@@ -29,9 +29,9 @@ import numpy as np
 import datetime
 import operator
 import argparse
+import joblib
 import random
 import shutil
-import joblib
 import glob2
 import copy
 import uuid
@@ -603,7 +603,7 @@ def get_umap_layout(dimensions, **kwargs):
     model = get_umap_model(dimensions, **kwargs)
     new_model = True
 
-  # # run PCA to reduce dimensionality of image vectors
+  # run PCA to reduce dimensionality of image vectors
   # w = PCA(n_components=min(100, len(vecs))).fit_transform(vecs)
   w = vecs
 
@@ -627,6 +627,15 @@ def get_umap_layout(dimensions, **kwargs):
   if new_model:
     joblib.dump(model, umap_model_path)
 
+  if dimensions == 3:
+    # for n_neighbors in (10, 25, 50, 100):
+    #   for min_dist in (0.1, 0.2, 0.5):
+    #     for metric in ('euclidean', 'correlation', 'cosine'):
+    #       draw_umap(w, 24, n_neighbors, min_dist, dimensions, metric)
+    # for n_neighbors in (10, 25, 50):
+    #   for min_dist in (0.01, 0.05, 0.1, 0.2, 0.5):
+    #     draw_umap(w, 24, n_neighbors, min_dist, dimensions, 'euclidean')
+
   return path
 
 
@@ -637,6 +646,34 @@ def get_umap_model(dimensions, **kwargs):
               metric=kwargs['metric'],
               random_state=kwargs['seed'],
               transform_seed=kwargs['seed'])
+
+
+def draw_umap(data, random_state=24, n_neighbors=15, min_dist=0.1, n_components=2, metric='euclidean'):
+  import matplotlib
+  matplotlib.use('Agg')
+  import matplotlib.pyplot as plt
+
+  fig_file = "umap-ng_%03d-md_%0.5f-m_%s-r_%02d.png" % (n_neighbors, min_dist, metric, random_state)
+  if os.path.exists(fig_file):
+    return
+
+  fit = UMAP(n_components=n_components, n_neighbors=n_neighbors, min_dist=min_dist,
+                  metric=metric, random_state=random_state, transform_seed=random_state)
+  print(data.shape)
+  u = fit.fit_transform(data)
+  fig = plt.figure()
+  if n_components == 1:
+    ax = fig.add_subplot(111)
+    ax.scatter(u[:, 0], range(len(u)), c=data)
+  if n_components == 2:
+    ax = fig.add_subplot(111)
+    ax.scatter(u[:, 0], u[:, 1], c=data)
+  if n_components == 3:
+    ax = fig.add_subplot(111, projection='3d')
+    ax.scatter(u[:, 0], u[:, 1], u[:, 2], s=1)
+
+  fig.savefig(fig_file)
+  plt.close(fig)
 
 
 def get_tsne_layout(**kwargs):
