@@ -31,6 +31,7 @@ import operator
 import argparse
 import random
 import shutil
+import joblib
 import glob2
 import copy
 import uuid
@@ -588,12 +589,24 @@ def get_inception_vectors(**kwargs):
 def get_umap_layout(dimensions, **kwargs):
   '''Get the x,y positions of images passed through a umap projection'''
   print(' * creating UMAP layout (%d dimensions)' % dimensions)
+
   vecs = get_inception_vectors(**kwargs)
+
   out_path = get_path('layouts', 'umap' if dimensions == 2 else 'umap3d', **kwargs)
   if os.path.exists(out_path) and kwargs['use_cache']: return out_path
-  model = get_umap_model(dimensions, **kwargs)
-  # run PCA to reduce dimensionality of image vectors
-  w = PCA(n_components=min(100, len(vecs))).fit_transform(vecs)
+
+  umap_model_path = get_path('layouts', 'umap-model' if dimensions == 2 else 'umap3d-model', **kwargs)
+  if os.path.exists(umap_model_path) and kwargs['use_cache']:
+    model = joblib.load(umap_model_path)
+    new_model = False
+  else:
+    model = get_umap_model(dimensions, **kwargs)
+    new_model = True
+
+  # # run PCA to reduce dimensionality of image vectors
+  # w = PCA(n_components=min(100, len(vecs))).fit_transform(vecs)
+  w = vecs
+
   # fetch categorical labels for images (if provided)
   y = []
   if kwargs.get('metadata', False):
@@ -605,9 +618,16 @@ def get_umap_layout(dimensions, **kwargs):
         if i == None: y.append(-1)
         else: y.append(d[i])
       y = np.array(y)
+
   # project the PCA space down to 2d for visualization
   z = model.fit(w, y=y if np.any(y) else None).embedding_
-  return write_layout(out_path, z, **kwargs)
+
+  path = write_layout(out_path, z, **kwargs)
+
+  if new_model:
+    joblib.dump(model, umap_model_path)
+
+  return path
 
 
 def get_umap_model(dimensions, **kwargs):
