@@ -635,14 +635,15 @@ def get_umap_layout(dimensions, **kwargs):
   if new_model:
     joblib.dump(model, umap_model_path)
 
-  if dimensions == 3:
-    # for n_neighbors in (10, 25, 50, 100):
-    #   for min_dist in (0.1, 0.2, 0.5):
-    #     for metric in ('euclidean', 'correlation', 'cosine'):
-    #       draw_umap(w, 24, n_neighbors, min_dist, dimensions, metric)
-    # for n_neighbors in (10, 25, 50):
-    #   for min_dist in (0.01, 0.05, 0.1, 0.2, 0.5):
-    #     draw_umap(w, 24, n_neighbors, min_dist, dimensions, 'euclidean')
+  # if dimensions == 3:
+  #   for n_neighbors in (10, 25, 50, 100):
+  #     for min_dist in (0.1, 0.2, 0.5):
+  #       for metric in ('euclidean', 'correlation', 'cosine'):
+  #         draw_umap(w, 24, n_neighbors, min_dist, dimensions, metric)
+  #   for n_neighbors in (10, 25, 50, 100):
+  #     for min_dist in (0.075, 0.05, 0.025, 0.01):
+  #       for metric in ('euclidean', 'correlation'):
+  #         draw_umap(w, 24, n_neighbors, min_dist, dimensions, metric)
 
   return path
 
