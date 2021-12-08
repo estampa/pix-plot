@@ -672,7 +672,7 @@ def draw_embeddings(w, z, **kwargs):
   zz = np.array(z)
   print(zz.shape)
 
-  fig = plt.figure()
+  fig = plt.figure(figsize=(10,10))
   ax = fig.add_subplot(111, projection='3d')
   ax.scatter(zz[:, 0], zz[:, 1], zz[:, 2], s=1)
 
@@ -1503,6 +1503,7 @@ def parse():
   config.update(vars(parser.parse_args()))
   print("******************************* [parse]")
   process_images(**config)
+
 
 if __name__ == '__main__':
   parse()
