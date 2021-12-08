@@ -1236,10 +1236,27 @@ def get_path(*args, **kwargs):
   return path + '.gz' if kwargs.get('gzip', False) else path
 
 
+def scale(path, obj, **kwargs):
+  obj = np.array(obj)
+  minmaxs_path = path + "-scale.json"
+  if os.path.exists(minmaxs_path):
+    mins, maxs = read_json(minmaxs_path, **kwargs)
+  else:
+    mins = obj.min(axis=0)
+    maxs = obj.max(axis=0)
+    write_json(minmaxs_path, [mins, maxs], **kwargs)
+
+  obj = (obj - mins) / (maxs - mins)
+  obj = (obj - 0.5) * 2
+
+  return obj.tolist()
+
+
 def write_layout(path, obj, **kwargs):
   '''Write layout json `obj` to disk and return the path to the saved file'''
   if kwargs.get('scale', True) != False:
     obj = (minmax_scale(obj)-0.5)*2 # scale -1:1
+    # obj = scale(path, obj, **kwargs)
   if kwargs.get('round', True) != False:
     obj = round_floats(obj)
   return write_json(path, obj, **kwargs)
