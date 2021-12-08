@@ -2720,7 +2720,7 @@ function LOD() {
   this.cell = this.getCanvas(config.size.lodCell);
   this.cellIdxToImage = {}; // image cache mapping cell idx to loaded image data
   this.grid = {}; // set by this.indexCells()
-  this.minZ = 0.8; // minimum zoom level to update textures
+  this.minZ = 4; // minimum zoom level to update textures
   this.initialRadius = r; // starting radius for LOD
   this.state = {
     openCoords: this.getAllTexCoords(), // array of unused x,y lod tex offsets
@@ -3834,6 +3834,7 @@ function getCanvasSize() {
 
 function getPath(path) {
   var base = window.location.origin;
+  // base += window.location.pathname.replace('index.html', '');
   base += window.location.pathname.replace(/[^/]*$/, '');
   base += path.replace('\\','/').replace(config.data.output_directory + '/', '');
   return base;
