@@ -632,6 +632,9 @@ def get_umap_layout(dimensions, **kwargs):
 
   path = write_layout(out_path, z, **kwargs)
 
+  if dimensions == 3:
+    draw_embeddings(w, z, **kwargs)
+
   if new_model:
     joblib.dump(model, umap_model_path)
 
@@ -655,6 +658,26 @@ def get_umap_model(dimensions, **kwargs):
               metric=kwargs['metric'],
               random_state=kwargs['seed'],
               transform_seed=kwargs['seed'])
+
+
+def draw_embeddings(w, z, **kwargs):
+  import matplotlib
+  matplotlib.use('Agg')
+  import matplotlib.pyplot as plt
+
+  fig_file = "umap-ng_%03d-md_%0.5f-m_%s-r_%02d.png" % (kwargs['n_neighbors'], kwargs['min_distance'], kwargs['metric'], kwargs['seed'])
+  if os.path.exists(fig_file):
+    return
+
+  zz = np.array(z)
+  print(zz.shape)
+
+  fig = plt.figure()
+  ax = fig.add_subplot(111, projection='3d')
+  ax.scatter(zz[:, 0], zz[:, 1], zz[:, 2], s=1)
+
+  fig.savefig(fig_file)
+  plt.close(fig)
 
 
 def draw_umap(data, random_state=24, n_neighbors=15, min_dist=0.1, n_components=2, metric='euclidean'):
