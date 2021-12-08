@@ -592,6 +592,9 @@ def get_umap_layout(dimensions, **kwargs):
 
   vecs = get_inception_vectors(**kwargs)
 
+  random.seed(kwargs['seed'])
+  np.random.seed(kwargs['seed'])
+
   out_path = get_path('layouts', 'umap' if dimensions == 2 else 'umap3d', **kwargs)
   if os.path.exists(out_path) and kwargs['use_cache']: return out_path
 
@@ -620,7 +623,12 @@ def get_umap_layout(dimensions, **kwargs):
       y = np.array(y)
 
   # project the PCA space down to 2d for visualization
-  z = model.fit(w, y=y if np.any(y) else None).embedding_
+  if new_model:
+    model = model.fit(w, y=y if np.any(y) else None)
+    # model = model.fit(w)
+
+  # Al crear el model els embeddings que dona són diferents que si fas transform ¬¬
+  z = model.transform(w)
 
   path = write_layout(out_path, z, **kwargs)
 
