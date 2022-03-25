@@ -26,6 +26,7 @@ from umap import UMAP
 import pkg_resources
 import rasterfairy
 import numpy as np
+import colorsys
 import datetime
 import operator
 import argparse
@@ -127,7 +128,7 @@ def process_images(**kwargs):
   tf.compat.v1.set_random_seed(kwargs['seed'])
   copy_web_assets(**kwargs)
   kwargs['out_dir'] = join(kwargs['out_dir'], 'data')
-  kwargs['image_paths'], kwargs['metadata'] = filter_images(**kwargs)
+  kwargs['image_paths'], kwargs['metadata'], kwargs['subfolders_info'] = filter_images(**kwargs)
   kwargs['atlas_dir'] = get_atlas_data(**kwargs)
   get_manifest(**kwargs)
   write_images(**kwargs)
@@ -212,9 +213,14 @@ def filter_images(**kwargs):
   # if there are no remaining images, throw an error
   if len(filtered_image_paths) == 0:
     raise Exception('No images were found! Please check your input image glob.')
+
+  subfolders_info = []
+  if kwargs.get('subfolders', True):
+    subfolders_info = get_subfolders_info(filtered_image_paths, **kwargs)
+
   # handle the case user provided no metadata
   if not kwargs.get('metadata', False):
-    return [filtered_image_paths, []]
+    return [filtered_image_paths, [], subfolders_info]
   # handle user metadata: retain only records with image and metadata
   l = get_metadata_list(**kwargs)
   meta_bn = set([clean_filename(i.get('filename', '')) for i in l])
@@ -237,7 +243,67 @@ def filter_images(**kwargs):
       metadata.append(copy.deepcopy(d[clean_filename(i, **kwargs)]))
   kwargs['metadata'] = metadata
   write_metadata(**kwargs)
-  return [images, metadata]
+  return [images, metadata, subfolders_info]
+
+
+def get_subfolders_info(filtered_image_paths, **kwargs):
+  subfolders_root_len = len(kwargs["subfolders_root"])
+
+  subfolders = {}
+
+  subfolders_info = []
+  for image_path in filtered_image_paths:
+    filename = os.path.basename(image_path)
+    path = os.path.dirname(image_path)
+    sub_path = path[subfolders_root_len:]
+
+    sub_path_split = sub_path.split("/")
+    subfolder = sub_path_split[0]
+    subsubfolder = "" if len(sub_path_split) < 2 else sub_path_split[1]
+    # print(filename, subfolder, subsubfolder)
+    # subfolders_info[filename] = {"subfolder": subfolder, "subsubfolder": subsubfolder}
+    subfolders_info.append({"subfolder": subfolder, "subsubfolder": subsubfolder})
+
+    if subfolder in subfolders and subsubfolder != '':
+      subfolders[subfolder].add(subsubfolder)
+    else:
+      subfolders[subfolder] = {subsubfolder} if subsubfolder != "" else {}
+
+  colors = {}
+  base_colors = get_distinct_colors(len(subfolders))
+  hue_variance = 1 / len(subfolders)
+  for idx, subfolder in enumerate(subfolders):
+    # print(subfolder)
+    color = base_colors[idx]
+    # print(color)
+    colors[subfolder] = {"color": hsv_to_rgb(*color), "subsubfolders": {}}
+
+    subsubfolders = subfolders[subfolder]
+    for subidx, subsubfolder in enumerate(subsubfolders):
+      # print(subsubfolder)
+      h = color[0] + (hue_variance / 4) * (subidx / (len(subsubfolders) - 1))
+      sv = 0.5 + 0.5 * subidx / (len(subsubfolders) - 1)
+      # print(h, sv, sv)
+      colors[subfolder]["subsubfolders"][subsubfolder] = hsv_to_rgb(h, sv, sv)
+
+  for idx, image in enumerate(subfolders_info):
+    subfolder = image["subfolder"]
+    subsubfolder = image["subsubfolder"]
+    if subsubfolder == "":
+      color = colors[subfolder]["color"]
+    else:
+      color = colors[subfolder]["subsubfolders"][subsubfolder]
+    subfolders_info[idx]["color"] = color
+
+  return {"images": subfolders_info, "colors": colors}
+
+
+def hsv_to_rgb(h, s, v):
+  return colorsys.hsv_to_rgb(h, s, v)
+
+def get_distinct_colors(n):
+  hue_partition = 1.0 / n
+  return [(hue_partition * value, 1.0, 1.0) for value in range(0, n)]
 
 
 def get_image_paths(**kwargs):
@@ -643,10 +709,10 @@ def get_umap_layout(dimensions, **kwargs):
   #     for min_dist in (0.1, 0.2, 0.5):
   #       for metric in ('euclidean', 'correlation', 'cosine'):
   #         draw_umap(w, 24, n_neighbors, min_dist, dimensions, metric)
-  #   for n_neighbors in (10, 25, 50, 100):
-  #     for min_dist in (0.075, 0.05, 0.025, 0.01):
+  #   for n_neighbors in (5, 10, 25, 50):
+  #     for min_dist in (0.5, 0.2, 0.1, 0.075, 0.05, 0.025, 0.01):
   #       for metric in ('euclidean', 'correlation'):
-  #         draw_umap(w, 24, n_neighbors, min_dist, dimensions, metric)
+  #         draw_umap(w, 24, n_neighbors, min_dist, dimensions, metric, kwargs["subfolders_info"])
 
   return path
 
@@ -680,20 +746,28 @@ def draw_embeddings(w, z, **kwargs):
   plt.close(fig)
 
 
-def draw_umap(data, random_state=24, n_neighbors=15, min_dist=0.1, n_components=2, metric='euclidean'):
+def draw_umap(data, random_state=24, n_neighbors=15, min_dist=0.1, n_components=2, metric='euclidean', subfolders_info={"images": [], "colors": []}):
   import matplotlib
   matplotlib.use('Agg')
   import matplotlib.pyplot as plt
+  from matplotlib.lines import Line2D
 
   fig_file = "umap-ng_%03d-md_%0.5f-m_%s-r_%02d.png" % (n_neighbors, min_dist, metric, random_state)
   if os.path.exists(fig_file):
     return
 
+  colors = []
+  labels = []
+  for image in subfolders_info["images"]:
+    colors.append(image["color"])
+    label = image["subsubfolder"] if image["subsubfolder"] != "" else image["subfolder"]
+    labels.append(label)
+
   fit = UMAP(n_components=n_components, n_neighbors=n_neighbors, min_dist=min_dist,
                   metric=metric, random_state=random_state, transform_seed=random_state)
   print(data.shape)
   u = fit.fit_transform(data)
-  fig = plt.figure()
+  fig = plt.figure(figsize=(10,10))
   if n_components == 1:
     ax = fig.add_subplot(111)
     ax.scatter(u[:, 0], range(len(u)), c=data)
@@ -702,7 +776,22 @@ def draw_umap(data, random_state=24, n_neighbors=15, min_dist=0.1, n_components=
     ax.scatter(u[:, 0], u[:, 1], c=data)
   if n_components == 3:
     ax = fig.add_subplot(111, projection='3d')
-    ax.scatter(u[:, 0], u[:, 1], u[:, 2], s=1)
+    if len(colors) > 0:
+      ax.scatter(u[:, 0], u[:, 1], u[:, 2], s=10, c=colors, label=labels)
+
+      legend_elements = []
+      for subfolder in subfolders_info["colors"]:
+        subfolder_data = subfolders_info["colors"][subfolder]
+        color = subfolder_data["color"]
+        legend_elements.append(Line2D([0], [0], marker='o', color=color, label=subfolder, markersize=4))
+
+        for subsubfolder in subfolder_data["subsubfolders"]:
+          color = subfolder_data["subsubfolders"][subsubfolder]
+          legend_elements.append(Line2D([0], [0], marker='o', color=color, label="    " + subsubfolder, markersize=4))
+
+      ax.legend(handles=legend_elements, loc='upper left')
+    else:
+      ax.scatter(u[:, 0], u[:, 1], u[:, 2], s=1)
 
   fig.savefig(fig_file)
   plt.close(fig)
@@ -1500,6 +1589,8 @@ def parse():
   parser.add_argument('--seed', type=int, default=config['seed'], help='seed for random processes')
   parser.add_argument('--n_clusters', type=int, default=config['n_clusters'], help='number of clusters to use when clustering with kmeans')
   parser.add_argument('--geojson', type=str, default=config['geojson'], help='path to a GeoJSON file with shapes to be rendered on a map')
+  parser.add_argument('--subfolders', action='store_true', help='use images in subfolders')
+  parser.add_argument('--subfolders_root', type=str, help='base folder of subfolders')
   config.update(vars(parser.parse_args()))
   print("******************************* [parse]")
   process_images(**config)
