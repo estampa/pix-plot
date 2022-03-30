@@ -3,9 +3,9 @@ import warnings; warnings.filterwarnings('ignore')
 from keras.preprocessing.image import save_img, img_to_array, array_to_img
 from os.path import basename, join, exists, dirname, realpath
 from keras.applications.inception_v3 import preprocess_input
-from keras.applications import InceptionV3, imagenet_utils
+from tensorflow.keras.applications import InceptionV3, imagenet_utils
 from sklearn.metrics import pairwise_distances_argmin_min
-from keras.backend.tensorflow_backend import set_session
+from tensorflow.compat.v1.keras.backend import set_session
 from collections import defaultdict, namedtuple
 from dateutil.parser import parse as parse_date
 from sklearn.preprocessing import minmax_scale
@@ -22,7 +22,8 @@ from PIL import ImageFile
 import keras.backend as K
 import tensorflow as tf
 import multiprocessing
-from umap import UMAP
+# from umap import UMAP
+from umap.parametric_umap import ParametricUMAP, load_ParametricUMAP
 import pkg_resources
 import rasterfairy
 import numpy as np
@@ -666,7 +667,7 @@ def get_umap_layout(dimensions, **kwargs):
 
   umap_model_path = get_path('layouts', 'umap-model' if dimensions == 2 else 'umap3d-model', **kwargs)
   if os.path.exists(umap_model_path) and kwargs['use_cache']:
-    model = joblib.load(umap_model_path)
+    model = load_ParametricUMAP(umap_model_path)
     new_model = False
   else:
     model = get_umap_model(dimensions, **kwargs)
@@ -702,7 +703,7 @@ def get_umap_layout(dimensions, **kwargs):
     draw_embeddings(w, z, **kwargs)
 
   if new_model:
-    joblib.dump(model, umap_model_path)
+    model.save(umap_model_path)
 
   # if dimensions == 3:
   #   for n_neighbors in (10, 25, 50, 100):
@@ -718,12 +719,12 @@ def get_umap_layout(dimensions, **kwargs):
 
 
 def get_umap_model(dimensions, **kwargs):
-  return UMAP(n_components=dimensions,
-              n_neighbors=kwargs['n_neighbors'],
-              min_dist=kwargs['min_distance'],
-              metric=kwargs['metric'],
-              random_state=kwargs['seed'],
-              transform_seed=kwargs['seed'])
+  return ParametricUMAP(n_components=dimensions,
+                        n_neighbors=kwargs['n_neighbors'],
+                        min_dist=kwargs['min_distance'],
+                        metric=kwargs['metric'],
+                        random_state=kwargs['seed'],
+                        transform_seed=kwargs['seed'])
 
 
 def draw_embeddings(w, z, **kwargs):
@@ -763,8 +764,8 @@ def draw_umap(data, random_state=24, n_neighbors=15, min_dist=0.1, n_components=
     label = image["subsubfolder"] if image["subsubfolder"] != "" else image["subfolder"]
     labels.append(label)
 
-  fit = UMAP(n_components=n_components, n_neighbors=n_neighbors, min_dist=min_dist,
-                  metric=metric, random_state=random_state, transform_seed=random_state)
+  fit = ParametricUMAP(n_components=n_components, n_neighbors=n_neighbors, min_dist=min_dist,
+                       metric=metric, random_state=random_state, transform_seed=random_state)
   print(data.shape)
   u = fit.fit_transform(data)
   fig = plt.figure(figsize=(10,10))
