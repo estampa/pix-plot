@@ -5,7 +5,6 @@ from os.path import basename, join, exists, dirname, realpath
 from keras.applications.inception_v3 import preprocess_input
 from tensorflow.keras.applications import InceptionV3, imagenet_utils
 from sklearn.metrics import pairwise_distances_argmin_min
-from tensorflow.compat.v1.keras.backend import set_session
 from collections import defaultdict, namedtuple
 from dateutil.parser import parse as parse_date
 from sklearn.preprocessing import minmax_scale
@@ -13,16 +12,13 @@ from keras_preprocessing.image import load_img
 from pointgrid import align_points_to_grid
 from scipy.spatial.distance import cdist
 from distutils.dir_util import copy_tree
-from sklearn.decomposition import PCA
 from iiif_downloader import Manifest
 from rasterfairy import coonswarp
 from keras.models import Model
 from scipy.stats import kde
 from PIL import ImageFile
-import keras.backend as K
 import tensorflow as tf
 import multiprocessing
-# from umap import UMAP
 from umap.parametric_umap import ParametricUMAP, load_ParametricUMAP
 import pkg_resources
 import rasterfairy
@@ -31,7 +27,6 @@ import colorsys
 import datetime
 import operator
 import argparse
-import joblib
 import random
 import shutil
 import glob2
