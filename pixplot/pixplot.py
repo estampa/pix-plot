@@ -686,8 +686,10 @@ def get_umap_layout(dimensions, **kwargs):
 
   # project the PCA space down to 2d for visualization
   if new_model:
-    model = model.fit(w, y=y if np.any(y) else None)
-    # model = model.fit(w)
+    if np.any(y):
+      model = model.fit(w, y=y)
+    else:
+      model = model.fit(w)
 
   # Al crear el model els embeddings que dona són diferents que si fas transform ¬¬
   z = model.transform(w)
@@ -695,7 +697,9 @@ def get_umap_layout(dimensions, **kwargs):
   path = write_layout(out_path, z, **kwargs)
 
   if dimensions == 3:
-    draw_embeddings(w, z, **kwargs)
+    fig_file = "umap-ng_%03d-md_%0.5f-m_%s-r_%02d.png" % \
+               (kwargs['n_neighbors'], kwargs['min_distance'], kwargs['metric'], kwargs['seed'])
+    draw_umap_embedding(z, dimensions, fig_file, kwargs["subfolders_info"])
 
   if new_model:
     model.save(umap_model_path)
@@ -722,35 +726,24 @@ def get_umap_model(dimensions, **kwargs):
                         transform_seed=kwargs['seed'])
 
 
-def draw_embeddings(w, z, **kwargs):
-  import matplotlib
-  matplotlib.use('Agg')
-  import matplotlib.pyplot as plt
-
-  fig_file = "umap-ng_%03d-md_%0.5f-m_%s-r_%02d.png" % (kwargs['n_neighbors'], kwargs['min_distance'], kwargs['metric'], kwargs['seed'])
+def draw_umap(data, random_state=24, n_neighbors=15, min_dist=0.1, n_components=2, metric='euclidean', subfolders_info={"images": [], "colors": []}):
+  fig_file = "umap-t-ng_%03d-md_%0.5f-m_%s-r_%02d.png" % (n_neighbors, min_dist, metric, random_state)
   if os.path.exists(fig_file):
     return
 
-  zz = np.array(z)
-  print(zz.shape)
-
-  fig = plt.figure(figsize=(10,10))
-  ax = fig.add_subplot(111, projection='3d')
-  ax.scatter(zz[:, 0], zz[:, 1], zz[:, 2], s=1)
-
-  fig.savefig(fig_file)
-  plt.close(fig)
+  model = ParametricUMAP(n_components=n_components, n_neighbors=n_neighbors, min_dist=min_dist,
+                         metric=metric, random_state=random_state, transform_seed=random_state)
+  print(data.shape)
+  model = model.fit(data)
+  u = model.transform(data)
+  draw_umap_embedding(u, n_components, fig_file, subfolders_info)
 
 
-def draw_umap(data, random_state=24, n_neighbors=15, min_dist=0.1, n_components=2, metric='euclidean', subfolders_info={"images": [], "colors": []}):
+def draw_umap_embedding(u, n_components, fig_file, subfolders_info={"images": [], "colors": []}):
   import matplotlib
   matplotlib.use('Agg')
   import matplotlib.pyplot as plt
   from matplotlib.lines import Line2D
-
-  fig_file = "umap-ng_%03d-md_%0.5f-m_%s-r_%02d.png" % (n_neighbors, min_dist, metric, random_state)
-  if os.path.exists(fig_file):
-    return
 
   colors = []
   labels = []
@@ -759,10 +752,6 @@ def draw_umap(data, random_state=24, n_neighbors=15, min_dist=0.1, n_components=
     label = image["subsubfolder"] if image["subsubfolder"] != "" else image["subfolder"]
     labels.append(label)
 
-  fit = ParametricUMAP(n_components=n_components, n_neighbors=n_neighbors, min_dist=min_dist,
-                       metric=metric, random_state=random_state, transform_seed=random_state)
-  print(data.shape)
-  u = fit.fit_transform(data)
   fig = plt.figure(figsize=(10,10))
   if n_components == 1:
     ax = fig.add_subplot(111)
