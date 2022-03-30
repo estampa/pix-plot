@@ -718,6 +718,9 @@ def get_umap_layout(dimensions, **kwargs):
 
 
 def get_umap_model(dimensions, **kwargs):
+  np.random.seed(kwargs['seed'])
+  tf.compat.v1.set_random_seed(kwargs['seed'])
+
   return ParametricUMAP(n_components=dimensions,
                         n_neighbors=kwargs['n_neighbors'],
                         min_dist=kwargs['min_distance'],
@@ -730,6 +733,9 @@ def draw_umap(data, random_state=24, n_neighbors=15, min_dist=0.1, n_components=
   fig_file = "umap-t-ng_%03d-md_%0.5f-m_%s-r_%02d.png" % (n_neighbors, min_dist, metric, random_state)
   if os.path.exists(fig_file):
     return
+
+  np.random.seed(random_state)
+  tf.compat.v1.set_random_seed(random_state)
 
   model = ParametricUMAP(n_components=n_components, n_neighbors=n_neighbors, min_dist=min_dist,
                          metric=metric, random_state=random_state, transform_seed=random_state)
