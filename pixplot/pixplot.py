@@ -753,12 +753,12 @@ def draw_umap(data, random_state=24, n_neighbors=15, min_dist=0.1, n_components=
 def draw_umap_embedding(u, n_components, fig_file, subfolders_info={"images": [], "colors": []}):
   colors = []
   labels = []
-  # sizes = []
+  symbols = []
   for image in subfolders_info["images"]:
     colors.append(image["color"])
-    label = image["subsubfolder"] if image["subsubfolder"] != "" else image["subfolder"]
+    label = image["subfolder"] if image["subsubfolder"] == "" else f'{image["subfolder"]} - {image["subsubfolder"]}'
     labels.append(label)
-    # sizes.append(1)
+    symbols.append(image["subfolder"])
 
   # fig = plt.figure(figsize=(10,10))
   if n_components == 1:
@@ -776,18 +776,17 @@ def draw_umap_embedding(u, n_components, fig_file, subfolders_info={"images": []
 
       for subsubfolder in subfolder_data["subsubfolders"]:
         color = subfolder_data["subsubfolders"][subsubfolder]
-        colorsIdx[subsubfolder] = f'rgb({color[0] * 255}, {color[1] * 255}, {color[2] * 255})'
+        colorsIdx[f'{subfolder} - {subsubfolder}'] = f'rgb({color[0] * 255}, {color[1] * 255}, {color[2] * 255})'
 
-    print(labels)
-    print(colorsIdx)
-
-    fig = px.scatter_3d(x=u[:, 0], y=u[:, 1], z=u[:, 2], color=labels, color_discrete_map=colorsIdx, width=800, height=800)
+    fig = px.scatter_3d(x=u[:, 0], y=u[:, 1], z=u[:, 2], color=labels, color_discrete_map=colorsIdx,
+                        symbol=symbols, opacity=0.8, width=1280, height=720)
 
     fig.update_traces(marker=dict(size=2,
                                   line=dict(width=0,
                                             color='DarkSlateGrey')),
                       selector=dict(mode='markers'))
-    fig.update_layout(legend={'itemsizing': 'constant'})
+    fig.update_layout(legend={'itemsizing': 'constant', 'font': {'size': 10}})
+    fig.update_layout(legend_title_text='Categoria')
     fig.write_image(fig_file)
 
     # ax = fig.add_subplot(111, projection='3d')
