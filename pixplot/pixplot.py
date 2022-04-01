@@ -697,8 +697,8 @@ def get_umap_layout(dimensions, **kwargs):
   path = write_layout(out_path, z, **kwargs)
 
   if dimensions == 3:
-    fig_file = "umap-ng_%03d-md_%0.5f-m_%s-r_%02d.png" % \
-               (kwargs['n_neighbors'], kwargs['min_distance'], kwargs['metric'], kwargs['seed'])
+    fig_file = "%s-ng_%03d-md_%0.5f-m_%s-r_%02d.png" % \
+               (kwargs['plot_id'], kwargs['n_neighbors'], kwargs['min_distance'], kwargs['metric'], kwargs['seed'])
     draw_umap_embedding(z, dimensions, fig_file, kwargs["subfolders_info"])
 
   if new_model:
@@ -729,8 +729,8 @@ def get_umap_model(dimensions, **kwargs):
                         transform_seed=kwargs['seed'])
 
 
-def draw_umap(data, random_state=24, n_neighbors=15, min_dist=0.1, n_components=2, metric='euclidean', subfolders_info={"images": [], "colors": []}):
-  fig_file = "umap-t-ng_%03d-md_%0.5f-m_%s-r_%02d.png" % (n_neighbors, min_dist, metric, random_state)
+def draw_umap(data, random_state=24, n_neighbors=15, min_dist=0.1, n_components=2, metric='euclidean', plot_id="umap", subfolders_info={"images": [], "colors": []}):
+  fig_file = "%s-t-ng_%03d-md_%0.5f-m_%s-r_%02d.png" % (plot_id, n_neighbors, min_dist, metric, random_state)
   if os.path.exists(fig_file):
     return
 
