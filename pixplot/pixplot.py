@@ -1,8 +1,8 @@
 from __future__ import division
 import warnings; warnings.filterwarnings('ignore')
-from keras.preprocessing.image import save_img, img_to_array, array_to_img
+from tensorflow.keras.preprocessing.image import save_img, img_to_array, array_to_img
 from os.path import basename, join, exists, dirname, realpath
-from keras.applications.inception_v3 import preprocess_input
+from tensorflow.keras.applications.inception_v3 import preprocess_input
 from tensorflow.keras.applications import InceptionV3, imagenet_utils
 from sklearn.metrics import pairwise_distances_argmin_min
 from collections import defaultdict, namedtuple
@@ -14,7 +14,7 @@ from scipy.spatial.distance import cdist
 from distutils.dir_util import copy_tree
 from iiif_downloader import Manifest
 from rasterfairy import coonswarp
-from keras.models import Model
+from tensorflow.keras.models import Model
 from scipy.stats import kde
 from PIL import ImageFile
 import tensorflow as tf
