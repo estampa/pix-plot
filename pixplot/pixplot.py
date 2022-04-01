@@ -788,6 +788,7 @@ def draw_umap_embedding(u, n_components, fig_file, subfolders_info={"images": []
     fig.update_layout(legend={'itemsizing': 'constant', 'font': {'size': 10}})
     fig.update_layout(legend_title_text='Categoria')
     fig.write_image(fig_file)
+    fig.write_html(fig_file + ".html", include_plotlyjs='plotly/plotly.min.js')
 
     # ax = fig.add_subplot(111, projection='3d')
     # if len(colors) > 0:
