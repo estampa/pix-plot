@@ -16,6 +16,7 @@ from iiif_downloader import Manifest
 from rasterfairy import coonswarp
 from tensorflow.keras.models import Model
 from scipy.stats import kde
+import plotly.express as px
 from PIL import ImageFile
 import tensorflow as tf
 import multiprocessing
@@ -713,6 +714,10 @@ def get_umap_layout(dimensions, **kwargs):
   #     for min_dist in (0.5, 0.2, 0.1, 0.075, 0.05, 0.025, 0.01):
   #       for metric in ('euclidean', 'correlation'):
   #         draw_umap(w, 24, n_neighbors, min_dist, dimensions, metric, kwargs["subfolders_info"])
+  #   for n_neighbors in (5, 10, 25, 50):
+  #     for min_dist in (0.5, 0.2, 0.1, 0.075, 0.05, 0.025, 0.01):
+  #       metric = 'euclidean'
+  #       draw_umap(w, 24, n_neighbors, min_dist, dimensions, metric, kwargs['plot_id'], kwargs["subfolders_info"])
 
   return path
 
@@ -746,19 +751,16 @@ def draw_umap(data, random_state=24, n_neighbors=15, min_dist=0.1, n_components=
 
 
 def draw_umap_embedding(u, n_components, fig_file, subfolders_info={"images": [], "colors": []}):
-  import matplotlib
-  matplotlib.use('Agg')
-  import matplotlib.pyplot as plt
-  from matplotlib.lines import Line2D
-
   colors = []
   labels = []
+  # sizes = []
   for image in subfolders_info["images"]:
     colors.append(image["color"])
     label = image["subsubfolder"] if image["subsubfolder"] != "" else image["subfolder"]
     labels.append(label)
+    # sizes.append(1)
 
-  fig = plt.figure(figsize=(10,10))
+  # fig = plt.figure(figsize=(10,10))
   if n_components == 1:
     ax = fig.add_subplot(111)
     ax.scatter(u[:, 0], range(len(u)), c=data)
@@ -766,26 +768,48 @@ def draw_umap_embedding(u, n_components, fig_file, subfolders_info={"images": []
     ax = fig.add_subplot(111)
     ax.scatter(u[:, 0], u[:, 1], c=data)
   if n_components == 3:
-    ax = fig.add_subplot(111, projection='3d')
-    if len(colors) > 0:
-      ax.scatter(u[:, 0], u[:, 1], u[:, 2], s=10, c=colors, label=labels)
+    colorsIdx = {}
+    for subfolder in subfolders_info["colors"]:
+      subfolder_data = subfolders_info["colors"][subfolder]
+      color = subfolder_data["color"]
+      colorsIdx[subfolder] = f'rgb({color[0] * 255}, {color[1] * 255}, {color[2] * 255})'
 
-      legend_elements = []
-      for subfolder in subfolders_info["colors"]:
-        subfolder_data = subfolders_info["colors"][subfolder]
-        color = subfolder_data["color"]
-        legend_elements.append(Line2D([0], [0], marker='o', color=color, label=subfolder, markersize=4))
+      for subsubfolder in subfolder_data["subsubfolders"]:
+        color = subfolder_data["subsubfolders"][subsubfolder]
+        colorsIdx[subsubfolder] = f'rgb({color[0] * 255}, {color[1] * 255}, {color[2] * 255})'
 
-        for subsubfolder in subfolder_data["subsubfolders"]:
-          color = subfolder_data["subsubfolders"][subsubfolder]
-          legend_elements.append(Line2D([0], [0], marker='o', color=color, label="    " + subsubfolder, markersize=4))
+    print(labels)
+    print(colorsIdx)
 
-      ax.legend(handles=legend_elements, loc='upper left')
-    else:
-      ax.scatter(u[:, 0], u[:, 1], u[:, 2], s=1)
+    fig = px.scatter_3d(x=u[:, 0], y=u[:, 1], z=u[:, 2], color=labels, color_discrete_map=colorsIdx, width=800, height=800)
 
-  fig.savefig(fig_file)
-  plt.close(fig)
+    fig.update_traces(marker=dict(size=2,
+                                  line=dict(width=0,
+                                            color='DarkSlateGrey')),
+                      selector=dict(mode='markers'))
+    fig.update_layout(legend={'itemsizing': 'constant'})
+    fig.write_image(fig_file)
+
+    # ax = fig.add_subplot(111, projection='3d')
+    # if len(colors) > 0:
+    #   ax.scatter(u[:, 0], u[:, 1], u[:, 2], s=10, c=colors, label=labels)
+    #
+    #   legend_elements = []
+    #   for subfolder in subfolders_info["colors"]:
+    #     subfolder_data = subfolders_info["colors"][subfolder]
+    #     color = subfolder_data["color"]
+    #     legend_elements.append(Line2D([0], [0], marker='o', color=color, label=subfolder, markersize=4))
+    #
+    #     for subsubfolder in subfolder_data["subsubfolders"]:
+    #       color = subfolder_data["subsubfolders"][subsubfolder]
+    #       legend_elements.append(Line2D([0], [0], marker='o', color=color, label="    " + subsubfolder, markersize=4))
+    #
+    #   ax.legend(handles=legend_elements, loc='upper left')
+    # else:
+    #   ax.scatter(u[:, 0], u[:, 1], u[:, 2], s=1)
+
+  # fig.savefig(fig_file)
+  # plt.close(fig)
 
 
 def get_tsne_layout(**kwargs):
