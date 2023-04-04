@@ -754,11 +754,12 @@ def draw_umap_embedding(u, n_components, fig_file, subfolders_info={"images": []
   colors = []
   labels = []
   symbols = []
-  for image in subfolders_info["images"]:
-    colors.append(image["color"])
-    label = image["subfolder"] if image["subsubfolder"] == "" else f'{image["subfolder"]} - {image["subsubfolder"]}'
-    labels.append(label)
-    symbols.append(image["subfolder"])
+  if isinstance(subfolders_info, dict):
+    for image in subfolders_info["images"]:
+      colors.append(image["color"])
+      label = image["subfolder"] if image["subsubfolder"] == "" else f'{image["subfolder"]} - {image["subsubfolder"]}'
+      labels.append(label)
+      symbols.append(image["subfolder"])
 
   # fig = plt.figure(figsize=(10,10))
   if n_components == 1:
@@ -768,25 +769,32 @@ def draw_umap_embedding(u, n_components, fig_file, subfolders_info={"images": []
     ax = fig.add_subplot(111)
     ax.scatter(u[:, 0], u[:, 1], c=data)
   if n_components == 3:
-    colorsIdx = {}
-    for subfolder in subfolders_info["colors"]:
-      subfolder_data = subfolders_info["colors"][subfolder]
-      color = subfolder_data["color"]
-      colorsIdx[subfolder] = f'rgb({color[0] * 255}, {color[1] * 255}, {color[2] * 255})'
+    if len(colors) > 0:
+      colorsIdx = {}
+      for subfolder in subfolders_info["colors"]:
+        subfolder_data = subfolders_info["colors"][subfolder]
+        color = subfolder_data["color"]
+        colorsIdx[subfolder] = f'rgb({color[0] * 255}, {color[1] * 255}, {color[2] * 255})'
 
-      for subsubfolder in subfolder_data["subsubfolders"]:
-        color = subfolder_data["subsubfolders"][subsubfolder]
-        colorsIdx[f'{subfolder} - {subsubfolder}'] = f'rgb({color[0] * 255}, {color[1] * 255}, {color[2] * 255})'
+        for subsubfolder in subfolder_data["subsubfolders"]:
+          color = subfolder_data["subsubfolders"][subsubfolder]
+          colorsIdx[f'{subfolder} - {subsubfolder}'] = f'rgb({color[0] * 255}, {color[1] * 255}, {color[2] * 255})'
 
-    fig = px.scatter_3d(x=u[:, 0], y=u[:, 1], z=u[:, 2], color=labels, color_discrete_map=colorsIdx,
-                        symbol=symbols, opacity=0.8, width=1280, height=720)
+      fig = px.scatter_3d(x=u[:, 0], y=u[:, 1], z=u[:, 2], color=labels, color_discrete_map=colorsIdx,
+                          symbol=symbols, opacity=0.8, width=1280, height=720)
 
-    fig.update_traces(marker=dict(size=2,
-                                  line=dict(width=0,
-                                            color='DarkSlateGrey')),
-                      selector=dict(mode='markers'))
-    fig.update_layout(legend={'itemsizing': 'constant', 'font': {'size': 10}})
-    fig.update_layout(legend_title_text='Categoria')
+      fig.update_traces(marker=dict(size=2,
+                                    line=dict(width=0,
+                                              color='DarkSlateGrey')),
+                        selector=dict(mode='markers'))
+      fig.update_layout(legend={'itemsizing': 'constant', 'font': {'size': 10}})
+      fig.update_layout(legend_title_text='Categoria')
+    else:
+      fig = px.scatter_3d(x=u[:, 0], y=u[:, 1], z=u[:, 2], opacity=0.8, width=1280, height=720)
+      fig.update_traces(marker=dict(size=2,
+                                    line=dict(width=0,
+                                              color='DarkSlateGrey')),
+                        selector=dict(mode='markers'))
     fig.write_image(fig_file)
     fig.write_html(fig_file + ".html", include_plotlyjs='plotly/plotly.min.js')
 
