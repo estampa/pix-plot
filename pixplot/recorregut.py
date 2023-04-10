@@ -31,9 +31,9 @@ def main():
     center_image = hotspot["img"]
     center_idx = images[center_image]
     center_pos = umap3d[center_idx]
-    centers.append(center_pos)
+    centers.append({"pos": center_pos, "idx": center_idx, "image": center_image})
 
-  np_centers = np.array(centers)
+  np_centers = np.array([center["pos"] for center in centers])
 
   print(len(centers))
 
