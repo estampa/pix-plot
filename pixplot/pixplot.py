@@ -680,7 +680,7 @@ def get_clip_vectors(**kwargs):
         np.save(vector_path, vec)
       vecs.append(vec)
 
-  return np.array(vecs)
+  return np.array(vecs).squeeze()
 
 
 def get_umap_layout(dimensions, **kwargs):
