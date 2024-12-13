@@ -21,15 +21,18 @@ from PIL import ImageFile
 import tensorflow as tf
 import multiprocessing
 from umap.parametric_umap import ParametricUMAP, load_ParametricUMAP
+from tqdm import tqdm
 import pkg_resources
 import rasterfairy
 import numpy as np
+import open_clip
 import colorsys
 import datetime
 import operator
 import argparse
 import random
 import shutil
+import torch
 import glob2
 import copy
 import uuid
@@ -649,11 +652,43 @@ def get_inception_vectors(**kwargs):
   return np.array(vecs)
 
 
+def get_clip_vectors(**kwargs):
+  '''Create and return Inception vector representation of Image() instances'''
+  print(' * generating Clip vectors for {} images'.format(len(kwargs['image_paths'])))
+  vector_dir = os.path.join(kwargs['out_dir'], 'image-vectors', 'clip')
+  if not os.path.exists(vector_dir): os.makedirs(vector_dir)
+
+  # model, _, preprocess = open_clip.create_model_and_transforms('ViT-B-32', pretrained='laion2b_s34b_b79k')
+  # model.eval()  # model in train mode by default, impacts some models with BatchNorm or stochastic depth active
+  # tokenizer = open_clip.get_tokenizer('ViT-B-32')
+
+  model, preprocess_train, preprocess_val = open_clip.create_model_and_transforms(
+    'hf-hub:laion/CLIP-ViT-B-32-laion2B-s34B-b79K')
+  tokenizer = open_clip.get_tokenizer('hf-hub:laion/CLIP-ViT-B-32-laion2B-s34B-b79K')
+
+  vecs = []
+  with torch.no_grad(), torch.cuda.amp.autocast():
+    print(' * creating image array')
+    for idx, i in enumerate(tqdm(stream_images(**kwargs))):
+      vector_path = os.path.join(vector_dir, os.path.basename(i.path) + '.npy')
+      if os.path.exists(vector_path) and kwargs['use_cache']:
+        vec = np.load(vector_path)
+      else:
+        image = preprocess_val(i.original).unsqueeze(0)
+        vec = model.encode_image(image)
+
+        np.save(vector_path, vec)
+      vecs.append(vec)
+
+  return np.array(vecs)
+
+
 def get_umap_layout(dimensions, **kwargs):
   '''Get the x,y positions of images passed through a umap projection'''
   print(' * creating UMAP layout (%d dimensions)' % dimensions)
 
-  vecs = get_inception_vectors(**kwargs)
+  # vecs = get_inception_vectors(**kwargs)
+  vecs = get_clip_vectors(**kwargs)
 
   random.seed(kwargs['seed'])
   np.random.seed(kwargs['seed'])
